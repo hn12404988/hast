@@ -1,26 +1,29 @@
-# Neural Socket
+# hast
 
-TCP and Unix Domain socket libraries written in C++11, including server and client. Server can hold multiple connections (by opening new thread). Client can also hold multiple connections to servers.
+Server and client libraries for topology in linux, using TCP/IP and Unix Domain socket. Main features are multi-threading and tiny enough to be embeded in program. 
 
 ## Main Feature of Server Class
 
-* Each connection running independently on its own thread. Once the client shut down the connection or the connection fail in some reasons, this thread will close and recycle automatically.
+* The way server deal with request is like the concept of `goroutine` in GO. You can set the maximum amount of threads (or by default, server will process each request independently, so there is no limit for amount of threads) to deal with requests. It's not thread-pool with fixed amount of threads, the amount of threads is dynamic, so it can be 1 to maximum amount in any time. 
+* You can set server to be Anti-Data-Racing, so server won't process requests with same incoming message.
+* Server can be freezed with all threads or certain threads by the call from client. More details are in the `example` folder. 
 
 ## Main Feature of Client Class
 
-* One client can hold multiple connections to different servers or a server (A server can create multiple threads for a client). You can set a maximum amount that it can hold. If the contact list is full, client will shut down one connection which is used most unfrequently, and add the new connection in.
+* `client_core` is a client library for single-thread used. It send request and wait for the reply.
+* `client_thread` is a client library for multi-thread used. It can send request and open a new thread to receive the reply.
 
 ## Getting Started
 
-* So far, this project is only tested on Linux. 
+* Only for Linux (kernel > 2.5.44 because using `epoll.h`). 
 * You will need an C++ compiler which can support C++11.
-* Copy "neural_socket" directory into your OS include directory.
-* Usage of this project and other details please refer to example files.
-* Try to compile the example files, and do some test run. Compile options can be (both for server and client):
+* Header-only library, so copy `hast` folder to your include folder.
+* Usage of the libraries and other details please refer to `example` folder and this project's wiki page (WIP).
+* This project use `std::thread`, so compile file with `std::thread` library.
 
-```
-g++ --std=c++11 -pthread -o unix_client.o unix_client_example.cpp
-```
+## Framework
+
+* There is another my project called 'dalahast' is the framework for this projet. It provide more features, rules, and UI interface for the diagram of topology. 
 
 ## Bugs and Issues
 
