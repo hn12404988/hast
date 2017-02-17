@@ -50,10 +50,10 @@ std::string client_core::error_send(short int flag, short int location_index, st
 	}
 	else{
 		if(location_index<0){
-			msg = "{\"type\":\"client\",\"from_node\":\""+node_name+"\",\"to_node\":\"NULL\",\"message\":\""+msg+"\",\"error_flag\":\""+std::to_string(flag)+"\"}";
+			msg = "{\"type\":\"client\",\"from_node\":\""+node_name+"\",\"to_node\":\"NULL\",\"message\":\""+msg+"\",\"message2\":\""+std::to_string(flag)+"\"}";
 		}
 		else{
-			msg = "{\"type\":\"client\",\"from_node\":\""+node_name+"\",\"to_node\":\""+(*location)[location_index]+"\",\"message\":\""+msg+"\",\"error_flag\":\""+std::to_string(flag)+"\"}";
+			msg = "{\"type\":\"client\",\"from_node\":\""+node_name+"\",\"to_node\":\""+(*location)[location_index]+"\",\"message\":\""+msg+"\",\"message2\":\""+std::to_string(flag)+"\"}";
 		}
 		return msg;
 	}
@@ -77,10 +77,10 @@ std::string client_core::reply_error_send(short int location_index, std::string 
 	}
 	else{
 		if(location_index<0){
-			msg = "{\"type\":\"request\",\"from_node\":\""+node_name+"\",\"to_node\":\"NULL\",\"message\":\""+msg+"\",\"reply\":\""+reply+"\"}";
+			msg = "{\"type\":\"request\",\"from_node\":\""+node_name+"\",\"to_node\":\"NULL\",\"message\":\""+msg+"\",\"message2\":\""+reply+"\"}";
 		}
 		else{
-			msg = "{\"type\":\"request\",\"from_node\":\""+node_name+"\",\"to_node\":\""+(*location)[location_index]+"\",\"message\":\""+msg+"\",\"reply\":\""+reply+"\"}";
+			msg = "{\"type\":\"request\",\"from_node\":\""+node_name+"\",\"to_node\":\""+(*location)[location_index]+"\",\"message\":\""+msg+"\",\"message2\":\""+reply+"\"}";
 		}
 		return msg;
 	}
