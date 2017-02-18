@@ -38,6 +38,7 @@ protected:
 	short int wait_maximum {2};
 	short int error_socket_index {-1};
 	std::string node_name {"no name"};
+	std::string server_index {"-1"};
 	static const int transport_size {100};
 	char reply[transport_size];
 	std::string str;
@@ -70,7 +71,7 @@ public:
 	short int uncheck(short int &location_index);
 	void import_location(std::vector<std::string> *location, short int amount = 0);
 	void set_wait_maximum(short int wait);
-	void set_error_node(short int socket_index,const char* file_name);
+	void set_error_node(short int socket_index,const char* file_name,std::string server);
 	
 };
 #include <hast/client_core.cpp>

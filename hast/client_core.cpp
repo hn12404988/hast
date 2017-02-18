@@ -42,6 +42,7 @@ std::string client_core::error_send(short int flag, short int location_index, st
 	}
 	else if(error_socket_index==location_index){
 		std::cout << "Error node is dead, so here are the error messages." << std::endl;
+		std::cout << "Server: " << server_index << std::endl;
 		std::cout << "Node: " << node_name << std::endl;
 		std::cout << "Flag: " << flag << std::endl;
 		std::cout << "To: " << (*location)[location_index] << std::endl;
@@ -50,10 +51,10 @@ std::string client_core::error_send(short int flag, short int location_index, st
 	}
 	else{
 		if(location_index<0){
-			msg = "{\"type\":\"client\",\"from_node\":\""+node_name+"\",\"to_node\":\"NULL\",\"message\":\""+msg+"\",\"message2\":\""+std::to_string(flag)+"\"}";
+			msg = "{\"type\":\"socket\",\"from_server\":\""+server_index+"\",\"from_node\":\""+node_name+"\",\"to_node\":\"NULL\",\"message\":\""+msg+"\",\"message2\":\""+std::to_string(flag)+"\"}";
 		}
 		else{
-			msg = "{\"type\":\"client\",\"from_node\":\""+node_name+"\",\"to_node\":\""+(*location)[location_index]+"\",\"message\":\""+msg+"\",\"message2\":\""+std::to_string(flag)+"\"}";
+			msg = "{\"type\":\"socket\",\"from_server\":\""+server_index+"\",\"from_node\":\""+node_name+"\",\"to_node\":\""+(*location)[location_index]+"\",\"message\":\""+msg+"\",\"message2\":\""+std::to_string(flag)+"\"}";
 		}
 		return msg;
 	}
@@ -69,6 +70,7 @@ std::string client_core::reply_error_send(short int location_index, std::string 
 	}
 	else if(error_socket_index==location_index){
 		std::cout << "Error node is dead, so here are the reply error messages." << std::endl;
+		std::cout << "Server: " << server_index << std::endl;
 		std::cout << "Node: " << node_name << std::endl;
 		std::cout << "To: " << (*location)[location_index] << std::endl;
 		std::cout << "Message: " << msg << std::endl;
@@ -77,10 +79,10 @@ std::string client_core::reply_error_send(short int location_index, std::string 
 	}
 	else{
 		if(location_index<0){
-			msg = "{\"type\":\"request\",\"from_node\":\""+node_name+"\",\"to_node\":\"NULL\",\"message\":\""+msg+"\",\"message2\":\""+reply+"\"}";
+			msg = "{\"type\":\"request\",\"from_server\":\""+server_index+"\",\"from_node\":\""+node_name+"\",\"to_node\":\"NULL\",\"message\":\""+msg+"\",\"message2\":\""+reply+"\"}";
 		}
 		else{
-			msg = "{\"type\":\"request\",\"from_node\":\""+node_name+"\",\"to_node\":\""+(*location)[location_index]+"\",\"message\":\""+msg+"\",\"message2\":\""+reply+"\"}";
+			msg = "{\"type\":\"request\",\"from_server\":\""+server_index+"\",\"from_node\":\""+node_name+"\",\"to_node\":\""+(*location)[location_index]+"\",\"message\":\""+msg+"\",\"message2\":\""+reply+"\"}";
 		}
 		return msg;
 	}
@@ -382,7 +384,8 @@ void client_core::set_wait_maximum(short int wait){
 	wait_maximum = wait;
 }
 
-void client_core::set_error_node(short int socket_index,const char* file_name){
+void client_core::set_error_node(short int socket_index,const char* file_name,std::string server){
 	node_name = file_name;
 	error_socket_index = socket_index;
+	server_index = server;
 }
