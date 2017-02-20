@@ -299,6 +299,16 @@ inline void socket_server::echo_back_msg(const short int socket_index, std::stri
 	send(socket_index, msg.c_str(), msg.length(),0);
 }
 
+inline void socket_server::echo_back_error(const short int socket_index, std::string &msg){
+	if(msg[0]=='[' || msg[0]=='{'){
+		msg = "0{\"Error\":"+msg+"}";
+	}
+	else{
+		msg = "0{\"Error\":\""+msg+"\"}";
+	}
+	send(socket_index, msg.c_str(), msg.length(),0);
+}
+
 inline void socket_server::check_in(const short int thread_index, std::string &msg){
 	while(section_check>=0){
 		while(check_str==""){}

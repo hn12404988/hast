@@ -32,6 +32,7 @@ public:
 	int get_socket(short int thread_index);
 	inline void echo_back_msg(const short int socket_index, const char* msg);
 	inline void echo_back_msg(const short int socket_index, std::string &msg);
+	inline void echo_back_error(const short int socket_index, std::string &msg);
 	inline void check_in(const short int thread_index, std::string &msg);
 	inline void check_out(const short int thread_index);
 };
