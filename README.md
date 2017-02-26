@@ -23,7 +23,7 @@ Server and client libraries for topology in linux, using TCP/IP and Unix Domain 
 
 ## Framework
 
-* There is another my project called 'dalahast' is the framework for this projet. It provide more features, rules, and UI interface for the diagram of topology. 
+* There is another my project called [dalahast](https://github.com/hn12404988/dalahast) which is a example for this project. It contain a complete system from web front-end to hast back-end. 
 
 ## Bugs and Issues
 
