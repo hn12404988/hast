@@ -2,6 +2,14 @@
 
 Server and client libraries for topology in linux, using TCP/IP and Unix Domain socket. Main features are multi-threading and tiny enough to be embeded in program. 
 
+## Introduction Video
+
+* Abstraction Layer
+  - [English](https://www.youtube.com/watch?v=EpoL8mSOA6E)
+  - [Chinese](https://www.youtube.com/watch?v=G41F7xHC2bs)
+* API Layer (WIP)
+* Code Layer (WIP)
+
 ## Main Feature of Server Class
 
 * The way server deal with request is like the concept of `goroutine` in GO. You can set the maximum amount of threads (or by default, server will process each request independently, so there is no limit for amount of threads) to deal with requests. It's not thread-pool with fixed amount of threads, the amount of threads is dynamic, so it can be 1 to maximum amount in any time. 
