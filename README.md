@@ -6,7 +6,7 @@ Server and client libraries for topology in linux, using TCP/IP and Unix Domain 
 
 * Abstraction Layer
   - [English](https://www.youtube.com/watch?v=EpoL8mSOA6E)
-  - [Chinese](https://www.youtube.com/watch?v=G41F7xHC2bs)
+  - [中文](https://www.youtube.com/watch?v=G41F7xHC2bs)
 * API Layer (WIP)
 * Code Layer (WIP)
 
