@@ -1,4 +1,4 @@
-bool tcp_server::init(review::tcp_socket::port port, short int unsigned max){
+bool tcp_server::init(hast::tcp_socket::port port, short int unsigned max){
 	max_amount = max;
 	if(getaddrinfo(NULL, port.c_str(), &hints, &res)!=0){
 		return false;

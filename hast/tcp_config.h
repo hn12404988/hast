@@ -23,7 +23,7 @@
  * 7: Invalid message format.
  *************************************************************/
 
-namespace review{
+namespace hast{
 	namespace tcp_socket{
 		typedef std::string ip;
 		typedef std::string port;

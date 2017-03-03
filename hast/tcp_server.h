@@ -7,9 +7,9 @@ class tcp_server : public tcp_config , public socket_server{
 public:
 tcp_server():
 	socket_server(){
-		reset_addr(review::tcp_socket::SERVER);
+		reset_addr(hast::tcp_socket::SERVER);
 	}
-	bool init(review::tcp_socket::port port, short int unsigned max = 0);
+	bool init(hast::tcp_socket::port port, short int unsigned max = 0);
 };
 
 #include <hast/tcp_server.cpp>
