@@ -88,7 +88,7 @@ std::string client_core::reply_error_send(short int location_index, std::string 
 
 void client_core::import_location(std::vector<std::string> *location, short int amount){
 	if(location!=nullptr){
-		reset_addr(review::tcp_socket::CLIENT);
+		reset_addr(hast::tcp_socket::CLIENT);
 		addr.sun_family = AF_UNIX;
 		this->location = location;
 		if(amount==0){
@@ -117,7 +117,7 @@ inline bool client_core::build_on_i(short int &location_index){
 		}
 		port = ip.substr(pos+1);
 		ip.resize(pos);
-		reset_addr(review::tcp_socket::CLIENT);
+		reset_addr(hast::tcp_socket::CLIENT);
 		if(getaddrinfo(ip.c_str(),port.c_str(),&hints,&res)!=0){
 			return false;
 		}
