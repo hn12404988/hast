@@ -29,6 +29,10 @@ Server and client libraries for topology in linux, using TCP/IP and Unix Domain 
 * Usage of the libraries and other details please refer to `example` folder and this project's wiki page (WIP).
 * This project use `std::thread`, so compile file with `std::thread` library.
 
+## Wiki Page
+
+* More information about how to use this library in this repository's [wiki page](https://github.com/hn12404988/hast/wiki).
+
 ## Framework
 
 * There is another my project called [dalahast](https://github.com/hn12404988/dalahast), which is a example for this project. It contain a complete system from web front-end to hast back-end. 
