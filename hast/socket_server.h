@@ -20,7 +20,7 @@ protected:
 	std::mutex waiting_mx,freeze_mx,check_mx;
 	std::map<std::string,std::mutex> anti;
 
-	inline void close_socket(const short int socket_index);
+	inline void close_socket(const int socket_index);
 	inline void recv_epoll();
 	
 public:
@@ -30,9 +30,9 @@ public:
 	void start_accept();
 	void done(const short int thread_index);
 	int get_socket(short int thread_index);
-	inline void echo_back_msg(const short int socket_index, const char* msg);
-	inline void echo_back_msg(const short int socket_index, std::string &msg);
-	inline void echo_back_error(const short int socket_index, std::string msg);
+	inline void echo_back_msg(const int socket_index, const char* msg);
+	inline void echo_back_msg(const int socket_index, std::string &msg);
+	inline void echo_back_error(const int socket_index, std::string msg);
 	inline void check_in(const short int thread_index, std::string &msg);
 	inline void check_out(const short int thread_index);
 };

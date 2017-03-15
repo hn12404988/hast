@@ -226,9 +226,9 @@ bool socket_server::msg_recv(const short int thread_index){
 	}
 }
 
-inline void socket_server::close_socket(const short int socket_index){
+inline void socket_server::close_socket(const int socket_index){
 	--alive_socket;
-	short int a;
+	int a;
 	epoll_ctl(epollfd, EPOLL_CTL_DEL, socket_index,nullptr);
 	shutdown(socket_index,SHUT_RDWR);
 	close(socket_index);
@@ -275,7 +275,7 @@ int socket_server::get_socket(short int thread_index){
 }
 
 void socket_server::start_accept(){
-	short int new_socket {1};
+	int new_socket {1};
 	while(new_socket>=0){
 		new_socket = accept4(host_socket, (struct sockaddr *)&client_addr, &client_addr_size,SOCK_NONBLOCK);
 		if(new_socket>0){
@@ -291,15 +291,15 @@ void socket_server::start_accept(){
 	}
 }
 
-inline void socket_server::echo_back_msg(const short int socket_index, const char* msg){
+inline void socket_server::echo_back_msg(const int socket_index, const char* msg){
 	send(socket_index, msg, strlen(msg),0);
 }
 
-inline void socket_server::echo_back_msg(const short int socket_index, std::string &msg){
+inline void socket_server::echo_back_msg(const int socket_index, std::string &msg){
 	send(socket_index, msg.c_str(), msg.length(),0);
 }
 
-inline void socket_server::echo_back_error(const short int socket_index, std::string msg){
+inline void socket_server::echo_back_error(const int socket_index, std::string msg){
 	if(msg[0]=='[' || msg[0]=='{'){
 		msg = "0{\"Error\":"+msg+"}";
 	}

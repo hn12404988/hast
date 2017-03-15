@@ -26,7 +26,6 @@ Server and client libraries for topology in linux, using TCP/IP and Unix Domain 
 * Only for Linux (kernel > 2.5.44 because using `epoll.h`). 
 * You will need an C++ compiler which can support C++11.
 * Header-only library, so copy `hast` folder to your include folder.
-* Usage of the libraries and other details please refer to `example` folder and this project's wiki page (WIP).
 * This project use `std::thread`, so compile file with `std::thread` library.
 
 ## Wiki Page
@@ -35,7 +34,8 @@ Server and client libraries for topology in linux, using TCP/IP and Unix Domain 
 
 ## Framework
 
-* There is another my project called [dalahast](https://github.com/hn12404988/dalahast), which is a example for this project. It contain a complete system from web front-end to hast back-end. 
+* There is another my project called [dalahast](https://github.com/hn12404988/dalahast), which is a example for this project. It contain a complete system from web front-end to hast back-end.
+* [hast_web](https://github.com/hn12404988/hast_web) is a library base on this project. The difference between them is that hast_web open a websocket port.
 
 ## Bugs and Issues
 

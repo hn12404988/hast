@@ -10,6 +10,7 @@ org-mode-config.el
 *.o
 *.socket
 *.log
+*.sh
 .DS_Store
 org-clock-save.el
 emacs-config.el
