@@ -1,5 +1,5 @@
-#ifndef client_core_h
-#define client_core_h
+#ifndef hast_client_core_h
+#define hast_client_core_h
 
 #include <iostream>
 #include<sys/socket.h>

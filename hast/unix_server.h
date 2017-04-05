@@ -1,5 +1,5 @@
-#ifndef unix_server_h
-#define unix_server_h
+#ifndef hast_unix_server_h
+#define hast_unix_server_h
 #include <hast/unix_config.h>
 #include <hast/socket_server.h>
 //#include <cstring> //errno

@@ -1,5 +1,5 @@
-#ifndef tcp_server_h
-#define tcp_server_h
+#ifndef hast_tcp_server_h
+#define hast_tcp_server_h
 #include <hast/tcp_config.h>
 #include <hast/socket_server.h>
 

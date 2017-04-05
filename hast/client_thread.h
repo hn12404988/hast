@@ -1,5 +1,5 @@
-#ifndef client_thread_h
-#define client_thread_h
+#ifndef hast_client_thread_h
+#define hast_client_thread_h
 
 #include <thread>
 #include <mutex>

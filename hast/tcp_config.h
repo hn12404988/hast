@@ -1,5 +1,5 @@
-#ifndef tcp_config_h
-#define tcp_config_h
+#ifndef hast_tcp_config_h
+#define hast_tcp_config_h
 
 #include<sys/socket.h>
 #include <sys/types.h>

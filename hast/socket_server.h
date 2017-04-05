@@ -1,5 +1,5 @@
-#ifndef socket_server_h
-#define socket_server_h
+#ifndef hast_socket_server_h
+#define hast_socket_server_h
 #include <hast/server_thread.h>
 #include <cstring>
 #include <map>
