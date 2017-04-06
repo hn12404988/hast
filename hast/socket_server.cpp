@@ -292,22 +292,35 @@ namespace hast{
 		}
 	}
 
-	inline void socket_server::echo_back_msg(const int socket_index, const char* msg){
-		send(socket_index, msg, strlen(msg),0);
+	inline void socket_server::echo_back_msg(const short int thread_index, const char* msg){
+		send(socketfd[thread_index], msg, strlen(msg),0);
 	}
 
-	inline void socket_server::echo_back_msg(const int socket_index, std::string &msg){
-		send(socket_index, msg.c_str(), msg.length(),0);
+	inline void socket_server::echo_back_msg(const short int thread_index, std::string &msg){
+		send(socketfd[thread_index], msg.c_str(), msg.length(),0);
 	}
 
-	inline void socket_server::echo_back_error(const int socket_index, std::string msg){
+	inline void socket_server::echo_back_error(const short int thread_index, std::string msg){
 		if(msg[0]=='[' || msg[0]=='{'){
 			msg = "0{\"Error\":"+msg+"}";
 		}
 		else{
 			msg = "0{\"Error\":\""+msg+"\"}";
 		}
-		send(socket_index, msg.c_str(), msg.length(),0);
+		send(socketfd[thread_index], msg.c_str(), msg.length(),0);
+	}
+	
+	inline void socket_server::echo_back_sql_error(const short int thread_index){
+		send(socketfd[thread_index], "0{\"Error\":\"SQL\"}", 16,0);
+	}
+
+	inline void socket_server::echo_back_result(const short int thread_index, bool error){
+		if(error==true){
+			send(socketfd[thread_index], "0", 1,0);
+		}
+		else{
+			send(socketfd[thread_index], "1", 1,0);
+		}
 	}
 
 	inline void socket_server::check_in(const short int thread_index, std::string &msg){
