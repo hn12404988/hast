@@ -8,7 +8,7 @@ auto execute = [&](const short int index){
 		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 		std::cout << "recv in thread: " << index << std::endl;
 		std::cout << "msg is: " << server.raw_msg[index] << std::endl;
-		server.echo_back_msg(server.socketfd[index],"Got it!");
+		server.echo_back_msg(index,"Got it!");
 	}
 	server.done(index);
 	return;

@@ -13,7 +13,7 @@ auto execute = [&](const short int index){
 		server.check_out(index);
 		std::cout << "/****** Check-Out ********/" << std::endl;
 		std::cout << "/******************************/" << std::endl;
-		server.echo_back_msg(server.socketfd[index],"Got it!");
+		server.echo_back_msg(index,"Got it!");
 	}
 	server.done(index);
 	return;

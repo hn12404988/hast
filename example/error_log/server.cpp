@@ -10,7 +10,7 @@ auto execute = [&](const short int index){
 			std::cout << "recv in thread: " << index << std::endl;
 			std::cout << "msg is: " << server.raw_msg[index] << std::endl;
 			std::cout << "/************ Error Reply ****************/" << std::endl;
-			server.echo_back_msg(server.socketfd[index],"0");
+			server.echo_back_msg(index,"0");
 		}
 		else{
 			std::cout << "/****** Server Success ********/" << std::endl;

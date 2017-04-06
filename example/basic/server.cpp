@@ -10,7 +10,7 @@ auto execute = [&](const short int index){
 		std::cout << "recv in thread: " << index << std::endl;
 		std::cout << "msg is: " << server.raw_msg[index] << std::endl;
 		std::cout << "/******************************/" << std::endl;
-		server.echo_back_msg(server.socketfd[index],"Got it!");
+		server.echo_back_msg(index,"Got it!");
 	}
 	server.done(index); // Close this thread.
 	return;
