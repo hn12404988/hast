@@ -20,7 +20,7 @@ namespace hast{
 		std::mutex waiting_mx,freeze_mx,check_mx;
 		std::map<std::string,std::mutex> anti;
 
-		inline void close_socket(const int socket_index);
+		void close_socket(const int socket_index);
 		inline void recv_epoll();
 	
 	public:
@@ -29,6 +29,7 @@ namespace hast{
 		bool msg_recv(const short int thread_index);
 		void start_accept();
 		void done(const short int thread_index);
+		void close_socket(const short int thread_index);
 		int get_socket(short int thread_index);
 		inline void echo_back_msg(const short int thread_index, const char* msg);
 		inline void echo_back_msg(const short int thread_index, std::string &msg);

@@ -227,7 +227,7 @@ namespace hast{
 		}
 	}
 
-	inline void socket_server::close_socket(const int socket_index){
+	void socket_server::close_socket(const int socket_index){
 		--alive_socket;
 		int a;
 		epoll_ctl(epollfd, EPOLL_CTL_DEL, socket_index,nullptr);
@@ -271,6 +271,10 @@ namespace hast{
 		}
 	}
 
+	void socket_server::close_socket(const short int thread_index){
+		close_socket(socketfd[thread_index]);
+	}
+	
 	int socket_server::get_socket(short int thread_index){
 		return socketfd[thread_index];
 	}
