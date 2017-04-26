@@ -1,5 +1,5 @@
-#ifndef hast_socket_server_h
-#define hast_socket_server_h
+#ifndef hast_socket_server_hpp
+#define hast_socket_server_hpp
 #include <hast/server_thread.hpp>
 #include <cstring>
 #include <map>
@@ -41,4 +41,4 @@ namespace hast{
 	};
 };
 #include <hast/socket_server.cpp>
-#endif
+#endif /* hast_socket_server_hpp */

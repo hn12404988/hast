@@ -1,5 +1,5 @@
-#ifndef hast_tcp_server_h
-#define hast_tcp_server_h
+#ifndef hast_tcp_server_hpp
+#define hast_tcp_server_hpp
 #include <hast/tcp_config.hpp>
 #include <hast/socket_server.hpp>
 
@@ -13,4 +13,4 @@ tcp_server():
 };
 
 #include <hast/tcp_server.cpp>
-#endif
+#endif /* hast_tcp_server_hpp */

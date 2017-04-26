@@ -1,5 +1,5 @@
-#ifndef hast_server_thread_h
-#define hast_server_thread_h
+#ifndef hast_server_thread_hpp
+#define hast_server_thread_hpp
 #include <mutex>
 #include <thread>
 
@@ -36,4 +36,4 @@ namespace hast{
 	};
 };
 #include <hast/server_thread.cpp>
-#endif
+#endif /* hast_server_thread_hpp */

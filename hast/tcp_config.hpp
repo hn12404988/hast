@@ -1,5 +1,5 @@
-#ifndef hast_tcp_config_h
-#define hast_tcp_config_h
+#ifndef hast_tcp_config_hpp
+#define hast_tcp_config_hpp
 
 #include<sys/socket.h>
 #include <sys/types.h>
@@ -38,4 +38,4 @@ protected:
 	inline void reset_addr(bool server_or_client);
 };
 #include<hast/tcp_config.cpp>
-#endif
+#endif /* hast_tcp_config_hpp */

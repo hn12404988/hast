@@ -1,5 +1,5 @@
-#ifndef hast_unix_server_h
-#define hast_unix_server_h
+#ifndef hast_unix_server_hpp
+#define hast_unix_server_hpp
 #include <hast/unix_config.hpp>
 #include <hast/socket_server.hpp>
 //#include <cstring> //errno
@@ -14,4 +14,4 @@ unix_server():
 };
 
 #include <hast/unix_server.cpp>
-#endif
+#endif /* hast_unix_server_hpp */

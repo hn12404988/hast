@@ -1,5 +1,5 @@
-#ifndef hast_client_thread_h
-#define hast_client_thread_h
+#ifndef hast_client_thread_hpp
+#define hast_client_thread_hpp
 
 #include <thread>
 #include <mutex>
@@ -50,5 +50,5 @@ public:
 	void multi_con(short int &location_index, short int unsigned amount);
 };
 #include <hast/client_thread.cpp>
-#endif
+#endif /* hast_client_thread_hpp */
 

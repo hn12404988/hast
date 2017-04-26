@@ -1,5 +1,5 @@
-#ifndef hast_unix_config_h
-#define hast_unix_config_h
+#ifndef hast_unix_config_hpp
+#define hast_unix_config_hpp
 
 #include<sys/socket.h>
 #include <sys/types.h>
@@ -27,4 +27,4 @@
 //#include<arpa/inet.h> //inet_addr
 //#include <netinet/in.h>
 
-#endif
+#endif /* hast_unix_config_hpp */

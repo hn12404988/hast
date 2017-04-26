@@ -1,5 +1,5 @@
-#ifndef hast_client_core_h
-#define hast_client_core_h
+#ifndef hast_client_core_hpp
+#define hast_client_core_hpp
 
 #include <iostream>
 #include<sys/socket.h>
@@ -74,5 +74,5 @@ public:
 	
 };
 #include <hast/client_core.cpp>
-#endif
+#endif /* hast_client_core_hpp */
 
