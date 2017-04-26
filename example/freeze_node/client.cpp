@@ -1,7 +1,7 @@
 #include <iostream>
 #include <chrono>
 #include <thread>
-#include <hast/client_thread.h>
+#include <hast/client_thread.hpp>
 
 int main(){
 	std::string msg;

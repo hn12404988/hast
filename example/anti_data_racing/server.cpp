@@ -1,5 +1,6 @@
 #include <iostream>
-#include <hast/unix_server.h>
+#include <hast/unix_server.hpp>
+
 unix_server server;
 
 auto execute = [&](const short int index){
