@@ -71,6 +71,7 @@ public:
 	void import_location(std::vector<std::string> *location, short int amount = 0);
 	void set_wait_maximum(short int wait);
 	void set_error_node(short int socket_index,const char* file_name);
+	std::vector<std::string> get_error_flag();
 	
 };
 #include <hast/client_core.cpp>

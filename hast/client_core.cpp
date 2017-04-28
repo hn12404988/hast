@@ -250,6 +250,7 @@ short int client_core::fire(short int &location_index,std::string &msg){
 		}
 		else{
 			if(str[0]=='0'){
+				msg = str;//Don't show error msg to client. Do this while on production.
 				str = reply_error_send(location_index, msg,str);
 				error_fire(str);
 				//msg = "0"; Don't show error msg to client. Do this while on production.
@@ -385,4 +386,19 @@ void client_core::set_wait_maximum(short int wait){
 void client_core::set_error_node(short int socket_index,const char* file_name){
 	node_name = file_name;
 	error_socket_index = socket_index;
+}
+
+std::vector<std::string> client_core::get_error_flag(){
+	std::vector<std::string> list {"Success",
+			"Server doesn't exist, or socket has problem",
+			"Fail on sending message",
+			"Server's execution crash",
+			"No reply",
+			"waiting list of cient_thread jam",
+			"Fail on epoll",
+			"Invalid message format",
+			"runner is not enough (client_thread)",
+			"thread joinable is false (client_thread)",
+			"epoll events is not 1"};
+	return list;
 }
