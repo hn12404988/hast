@@ -252,7 +252,7 @@ short int client_core::fire(short int &location_index,std::string &msg){
 			if(str[0]=='0'){
 				str = reply_error_send(location_index, msg,str);
 				error_fire(str);
-				msg = "0";
+				//msg = "0"; Don't show error msg to client. Do this while on production.
 			}
 			else{
 				msg = str;
