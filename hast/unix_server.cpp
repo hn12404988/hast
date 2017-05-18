@@ -1,6 +1,6 @@
 bool unix_server::init(const char *file, short int unsigned max){
 	max_amount = max;
-	int flag {1};
+	int flag {1},i;
 	std::string socket_name;
 	socket_name.append(file);
 	if(socket_name.find(".cpp")!=std::string::npos){

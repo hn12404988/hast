@@ -1,82 +1,104 @@
 namespace hast{
+	server_thread::server_thread(){}
 	server_thread::~server_thread(){
-		i = thread_list.size()-1;
-		for(;i>=0;--i){
-			if(thread_list[i]!=nullptr){
-				if(thread_list[i]->joinable()==true){
-					thread_list[i]->join();
-					delete thread_list[i];
+		short int a;
+		a = thread_list.size()-1;
+		for(;a>=0;--a){
+			if(thread_list[a]!=nullptr){
+				if(thread_list[a]->joinable()==true){
+					thread_list[a]->join();
+					delete thread_list[a];
 				}
 			}
 		}
 	}
 
-	inline void server_thread::resize(){
-		//called by recv thread
-		i = alive_thread - alive_socket - 1;
-		if(i>0){
-			j = socketfd.size()-1;
-			for(;j>=0;--j){
-				if(recv_thread==j){
-					continue;
-				}
-				if(i==0){
-					break;
-				}
-				if(in_execution[j]==false && socketfd[j]==-1 && thread_list[j]!=nullptr){
-					socketfd[j] = -2;
-				}
-				else if(socketfd[j]==-2){
-				}
-				else{
-					continue;
-				}
-				if(thread_list[j]->joinable()==true){
-					thread_list[j]->join();
-					delete thread_list[j];
-					thread_list[j] = nullptr;
-					socketfd[j] = -1;
-					--alive_thread;
-					--i;
-				}
-			}
-		}
-	}
-
-	inline void server_thread::get_thread(){
-		//called by recv thread
-		j = socketfd.size()-1;
-		for(;j>=0;--j){
-			if(recv_thread==j){
+	inline void server_thread::resize(short int amount){
+		short int a;
+		a = socketfd.size()-1;
+		for(;a>=0;--a){
+			if(recv_thread==a){
 				continue;
 			}
-			if(socketfd[j]==-1 && in_execution[j]==false){
+			if(status[a]==hast::WAIT && thread_list[a]!=nullptr){
+				if(amount>0){
+					status[a] = hast::RECYCLE;
+					--amount;
+					continue;
+				}
+			}
+			else if(status[a]==hast::RECYCLE){
+				if(thread_list[a]->joinable()==true){
+					thread_list[a]->join();
+					delete thread_list[a];
+					thread_list[a] = nullptr;
+					status[a] = hast::BUSY;
+				}
+				else{
+					//TODO Something Wrong
+				}
+			}
+		}
+	}
+
+	short int server_thread::get_thread(){
+		thread_mx.lock();
+		short int a;
+		a = socketfd.size()-1;
+		for(;a>=0;--a){
+			if(recv_thread==a){
+				continue;
+			}
+			if(status[a]==hast::WAIT){
 				break;
 			}
 		}
-		if(j==-1){
-			if(socketfd[recv_thread]==-1){
-				j = recv_thread;
+		if(a==-1){
+			if(status[recv_thread]==hast::WAIT){
+				a = recv_thread;
+				status[a]==hast::GET;
 			}
 		}
+		else{
+			status[a]==hast::GET;
+		}
+		thread_mx.unlock();
+		return a;
 	}
 
-	inline void server_thread::add_thread(){
-		//called by main thread and recv thread
+	short int server_thread::get_thread_no_recv(){
+		thread_mx.lock();
 		short int a;
-		recv_mx.lock();
+		a = socketfd.size()-1;
+		for(;a>=0;--a){
+			if(recv_thread==a){
+				continue;
+			}
+			if(status[a]==hast::WAIT){
+				break;
+			}
+		}
+		if(a>=0){
+			status[a]==hast::GET;
+		}
+		thread_mx.unlock();
+		return a;
+	}
+	
+	inline void server_thread::add_thread(){
+		short int a;
+		thread_mx.lock();
 		a = socketfd.size();
 		if(a>0){
 			--a;
 			for(;a>=0;--a){
 				if(thread_list[a]==nullptr){
 					thread_list[a] = new std::thread(execute,a);
-					++alive_thread;
 					break;
 				}
 			}
 			if(a>=0){
-				recv_mx.unlock();
+				thread_mx.unlock();
 				return;
 			}
 			else{
@@ -84,25 +106,24 @@ namespace hast{
 				if(max_amount>0){
 					if(all_freeze==-1 && msg_freeze==-1 && section_check==-1){
 						if(a>=max_amount){
-							recv_mx.unlock();
+							thread_mx.unlock();
 							return;
 						}
 					}
 				}
 			}
 		}
-		in_execution.push_back(true);
-		raw_msg.push_back("");
 		if(anti_data_racing==true || freeze==true){
 			raw_msg_bk.push_back("");
 		}
 		if(check_data_racing==true){
 			check_entry.push_back(false);
 		}
+		socketfd.push_back(-1);
+		status.push_back(hast::BUSY);
+		raw_msg.push_back("");
 		thread_list.push_back(nullptr);
 		thread_list[a] = new std::thread(execute,a);
-		++alive_thread;
-		socketfd.push_back(-1);
-		recv_mx.unlock();
+		thread_mx.unlock();
 	}
 };

@@ -11,64 +11,94 @@ namespace hast{
 	}
 
 	void socket_server::done(const short int thread_index){
-		if(recv_thread==thread_index){
-			recv_thread = -1;
-		}
-		in_execution[thread_index] = true;
-		socketfd[thread_index] = -2;
+		/**
+		 * This is here for threads break msg_recv loop accidentally.
+		 * Threads are only allowed to break msg_recv loop by get 'false' from it.
+		 **/
+		status[thread_index] = hast::RECYCLE;
 	}
 
 	inline void socket_server::recv_epoll(){
+		short int a,b,wait_amount {0};
+		int c,loop_amount {0};
 		while(got_it==false){}
 		for(;;){
-			resize();
+			/* TODO Find a way to clear `anti`.
 			if(alive_thread==1){
 				anti.clear();
 			}
-			waiting_mx.lock();
+			*/
+			b = socketfd.size()-1;
+			wait_amount = 0;
+			for(;b>=0;--b){
+				if(status[b]==hast::READ){
+					++b;
+					continue;
+				}
+				else if(status[b]==hast::WAIT){
+					++wait_amount;
+				}
+			}
+			wait_mx.lock();
+			if(wait_amount>1){
+				++loop_amount;
+				if(loop_amount>resize_while_loop){
+					resize(wait_amount-1);
+				}
+				else{
+					resize(0);
+				}
+			}
+			else{
+				resize(0);
+				loop_amount = 0;
+			}
 			for(;;){
-				i = epoll_wait(epollfd, events, MAX_EVENTS, 3500);
-				if(i>0){
-					waiting_mx.unlock();
+				a = epoll_wait(epollfd, events, MAX_EVENTS, 3500);
+				if(a>0){
+					wait_mx.unlock();
 					break;
 				}
 			}
-			if(all_freeze>=0 || msg_freeze>=0 || section_check>=0){
-				j = i;
-			}
-			else{
-				j = i - alive_thread + 1;
-			}
-			for(;j>0;--j){
-				add_thread();
-			}
-			--i;
-			for(;i>=0;--i){
-				if(events[i].events!=1){
-					close_socket(events[i].data.fd);
+			--a;
+			for(;a>=0;--a){
+				c = events[a].data.fd;
+				if(events[a].events!=1){
+					epoll_ctl(epollfd, EPOLL_CTL_DEL, c,nullptr);
+					shutdown(c,SHUT_RDWR);
+					close(c);
+					if(on_close!=nullptr){
+						on_close(c);
+					}
 					continue;
 				}
-				get_thread();
-				if(j==-1){
+				b = get_thread();
+				if(b==-1){
 					break;
 				}
 				got_it = false;
-				socketfd[j] = events[i].data.fd;
-				ev_tmp.data.fd = events[i].data.fd;
-				epoll_ctl(epollfd, EPOLL_CTL_MOD, events[i].data.fd,&ev_tmp);
-				if(j!=recv_thread){
+				socketfd[b] = c;
+				status[b] = hast::READ;
+				ev_tmp.data.fd = c;
+				epoll_ctl(epollfd, EPOLL_CTL_MOD, c,&ev_tmp);
+				if(b!=recv_thread){
 					while(got_it==false){}
 				}
 			}
-			if(i>=0){
+			if(a>=0){
+				for(;a>=0;--a){
+					add_thread();
+				}
 				break;
 			}
 			else{
-				if(socketfd[recv_thread]>=0){
+				if(b==recv_thread){
+					add_thread();
 					break;
 				}
 			}
 		}
+		resize(0);
 		recv_thread = -1;
 	}
 
@@ -84,37 +114,39 @@ namespace hast{
 				check_entry[thread_index] = false;
 			}
 			raw_msg[thread_index].clear();
+			thread_mx.lock();
 			if(socketfd[thread_index]>=0){
 				ev.data.fd = socketfd[thread_index];
 				epoll_ctl(epollfd, EPOLL_CTL_MOD, socketfd[thread_index],&ev);
 				socketfd[thread_index] = -1;
 			}
-			in_execution[thread_index] = false;
-			recv_mx.lock();
+			status[thread_index] = hast::WAIT;
 			if(recv_thread==-1){
 				recv_thread = thread_index;
-				recv_mx.unlock();
+				thread_mx.unlock();
 				recv_epoll();
 			}
 			else{
-				recv_mx.unlock();
+				thread_mx.unlock();
 			}
 			for(;;){
-				if(socketfd[thread_index]>=0){
+				if(status[thread_index]==hast::READ){
 					break;
 				}
-				else if(socketfd[thread_index]==-2){
+				else if(status[thread_index]==hast::RECYCLE){
 					return false;
 				}
 				else if(recv_thread==-1){
-					break;
+					if(status[thread_index]==hast::WAIT){
+						break;
+					}
 				}
 				else{
-					waiting_mx.lock();
-					waiting_mx.unlock();
+					wait_mx.lock();
+					wait_mx.unlock();
 				}
 			}
-			if(socketfd[thread_index]==-1){
+			if(status[thread_index]==hast::WAIT){
 				continue;
 			}
 			got_it = true;
@@ -123,10 +155,7 @@ namespace hast{
 			for(;;){
 				l = recv(socketfd[thread_index], new_char, transport_size, 0);
 				if(l>0){
-					l += raw_msg[thread_index].length();
-					raw_msg[thread_index].append(new_char);
-					raw_msg[thread_index].resize(l);
-					l = 0;
+					raw_msg[thread_index].append(new_char,l);
 				}
 				else{
 					break;
@@ -192,7 +221,7 @@ namespace hast{
 						all_freeze = socketfd[thread_index];
 						l = socketfd.size()-1;
 						for(;l>=0;--l){
-							if(in_execution[l]==true && socketfd[l]>=0){
+							if(status[l]==hast::BUSY && socketfd[l]>=0){
 								++l;
 							}
 						}
@@ -206,7 +235,7 @@ namespace hast{
 						freeze_str = raw_msg[thread_index];
 						l = socketfd.size()-1;
 						for(;l>=0;--l){
-							if(in_execution[l]==true && raw_msg_bk[l]==freeze_str){
+							if(status[l]==hast::BUSY && raw_msg_bk[l]==freeze_str){
 								++l;
 							}
 						}
@@ -222,17 +251,16 @@ namespace hast{
 				raw_msg_bk[thread_index] = raw_msg[thread_index];
 				anti[raw_msg[thread_index]].lock();
 			}
-			in_execution[thread_index] = true;
+			status[thread_index] = hast::BUSY;
 			return true;
 		}
 	}
 
 	void socket_server::close_socket(const int socket_index){
-		--alive_socket;
 		int a;
-		epoll_ctl(epollfd, EPOLL_CTL_DEL, socket_index,nullptr);
 		shutdown(socket_index,SHUT_RDWR);
 		close(socket_index);
+		epoll_ctl(epollfd, EPOLL_CTL_DEL, socket_index,nullptr);
 		a = socketfd.size()-1;
 		for(;a>=0;--a){
 			if(socketfd[a]==socket_index){
@@ -291,7 +319,6 @@ namespace hast{
 				if(recv_thread==-1){
 					add_thread();
 				}
-				++alive_socket;
 			}
 		}
 	}

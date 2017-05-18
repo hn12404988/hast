@@ -4,14 +4,21 @@
 #include <thread>
 
 namespace hast{
+	const char WAIT {0};
+	const char BUSY {1};
+	const char RECYCLE {2};
+	const char READ {3};
+	const char READ_PREFIX {4};
+	const char GET {5};
+	
 	class server_thread{
 	protected:
-		short int i,j, alive_socket {0}, alive_thread{0};
-		short int max_amount {0};
-		short int recv_thread {-1};
-		std::mutex recv_mx;
+		server_thread();
+		~server_thread();
+		short int max_amount {0}, recv_thread {-1};
+		std::mutex thread_mx;
 
-		std::vector<bool> in_execution;
+		std::vector<char> status;
 		std::vector<std::thread*> thread_list;
 		std::vector<std::string> raw_msg_bk;
 		std::vector<bool> check_entry;
@@ -22,17 +29,17 @@ namespace hast{
 		std::string check_str {"<>"};
 		std::string freeze_str {"!"};
 
-		inline void get_thread();
-		inline void resize();
+		short int get_thread();
+		short int get_thread_no_recv();
+		inline void resize(short int amount);
 		inline void add_thread();
 	public:
-		std::function<void(const short int)> execute;
+		std::function<void(const short int)> execute {nullptr};
 		std::vector<int> socketfd;
 		std::vector<std::string> raw_msg;
 		bool anti_data_racing {false};
 		bool check_data_racing {false};
 		bool freeze {false};
-		~server_thread();
 	};
 };
 #include <hast/server_thread.cpp>

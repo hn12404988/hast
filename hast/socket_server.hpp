@@ -14,16 +14,18 @@ namespace hast{
 		bool got_it {true};
 		const int listen_pending{50};
 		const int transport_size{100};
+		const int resize_while_loop{20};
 		struct epoll_event ev,ev_tmp, events[MAX_EVENTS];
 		int host_socket {0};
 	
-		std::mutex waiting_mx,freeze_mx,check_mx;
+		std::mutex wait_mx,freeze_mx,check_mx;
 		std::map<std::string,std::mutex> anti;
 
 		void close_socket(const int socket_index);
 		inline void recv_epoll();
 	
 	public:
+		std::function<void(const int)> on_close {nullptr};
 		socket_server();
 		~socket_server();
 		bool msg_recv(const short int thread_index);
