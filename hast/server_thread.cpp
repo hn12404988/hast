@@ -56,11 +56,11 @@ namespace hast{
 		if(a==-1){
 			if(status[recv_thread]==hast::WAIT){
 				a = recv_thread;
-				status[a]==hast::GET;
+				status[a] = hast::GET;
 			}
 		}
 		else{
-			status[a]==hast::GET;
+			status[a] = hast::GET;
 		}
 		thread_mx.unlock();
 		return a;
@@ -79,7 +79,7 @@ namespace hast{
 			}
 		}
 		if(a>=0){
-			status[a]==hast::GET;
+			status[a] = hast::GET;
 		}
 		thread_mx.unlock();
 		return a;
