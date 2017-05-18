@@ -11,6 +11,7 @@ auto execute = [&](const short int index){
 		std::cout << "msg is: " << server.raw_msg[index] << std::endl;
 		std::cout << "/******************************/" << std::endl;
 		server.echo_back_msg(index,"Got it!");
+		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 	}
 	server.done(index); // Close this thread.
 	return;
