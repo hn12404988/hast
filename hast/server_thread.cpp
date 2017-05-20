@@ -1,22 +1,57 @@
 namespace hast{
 	server_thread::server_thread(){}
 	server_thread::~server_thread(){
-		short int a;
-		a = thread_list.size()-1;
-		for(;a>=0;--a){
-			if(thread_list[a]!=nullptr){
-				if(thread_list[a]->joinable()==true){
-					thread_list[a]->join();
-					delete thread_list[a];
+		if(status!=nullptr){
+			short int a {0};
+			for(;a<max_thread;++a){
+				if(thread_list[a]!=nullptr){
+					if(thread_list[a]->joinable()==true){
+						thread_list[a]->join();
+						delete thread_list[a];
+					}
 				}
+			}
+			delete [] status;
+			delete [] thread_list;
+			delete [] raw_msg;
+			delete [] socketfd;
+			if(raw_msg_bk!=nullptr){
+				delete [] raw_msg_bk;
+			}
+			if(check_entry!=nullptr){
+				delete [] check_entry;
 			}
 		}
 	}
-
-	inline void server_thread::resize(short int amount){
+	void server_thread::init(){
 		short int a;
-		a = socketfd.size()-1;
-		for(;a>=0;--a){
+		status = new char [max_thread];
+		thread_list = new std::thread* [max_thread];
+		raw_msg = new std::string [max_thread];
+		socketfd = new int [max_thread];
+		for(a=0;a<max_thread;++a){
+			status[a] = hast::BUSY;
+			thread_list[a] = nullptr;
+			raw_msg[a] = "";
+			socketfd[a] = -1;
+		}
+		if(anti_data_racing==true || freeze==true){
+			raw_msg_bk = new std::string [max_thread];
+			for(a=0;a<max_thread;++a){
+				raw_msg_bk[a] = "";
+			}
+		}
+		if(check_data_racing==true){
+			check_entry = new bool [max_thread];
+			for(a=0;a<max_thread;++a){
+				check_entry[a] = false;
+			}
+		}
+	}
+	
+	inline void server_thread::resize(short int amount){
+		short int a {0};
+		for(;a<max_thread;++a){
 			if(recv_thread==a){
 				continue;
 			}
@@ -43,9 +78,8 @@ namespace hast{
 
 	short int server_thread::get_thread(){
 		thread_mx.lock();
-		short int a;
-		a = socketfd.size()-1;
-		for(;a>=0;--a){
+		short int a {0};
+		for(;a<max_thread;++a){
 			if(recv_thread==a){
 				continue;
 			}
@@ -53,7 +87,7 @@ namespace hast{
 				break;
 			}
 		}
-		if(a==-1){
+		if(a==max_thread){
 			if(status[recv_thread]==hast::WAIT){
 				a = recv_thread;
 				status[a] = hast::GET;
@@ -68,9 +102,8 @@ namespace hast{
 
 	short int server_thread::get_thread_no_recv(){
 		thread_mx.lock();
-		short int a;
-		a = socketfd.size()-1;
-		for(;a>=0;--a){
+		short int a {0};
+		for(;a<max_thread;++a){
 			if(recv_thread==a){
 				continue;
 			}
@@ -78,53 +111,25 @@ namespace hast{
 				break;
 			}
 		}
-		if(a>=0){
+		if(a<max_thread){
 			status[a] = hast::GET;
+		}
+		else{
+			a = -1;
 		}
 		thread_mx.unlock();
 		return a;
 	}
 	
 	inline void server_thread::add_thread(){
-		short int a;
+		short int a {0};
 		thread_mx.lock();
-		a = socketfd.size();
-		if(a>0){
-			--a;
-			for(;a>=0;--a){
-				if(thread_list[a]==nullptr){
-					thread_list[a] = new std::thread(execute,a);
-					break;
-				}
-			}
-			if(a>=0){
-				thread_mx.unlock();
-				return;
-			}
-			else{
-				a = socketfd.size();
-				if(max_amount>0){
-					if(anti_data_racing==true || check_data_racing==true || freeze==true){}
-					else{
-						if(a>=max_amount){
-							thread_mx.unlock();
-							return;
-						}
-					}
-				}
+		for(;a<max_thread;++a){
+			if(thread_list[a]==nullptr){
+				thread_list[a] = new std::thread(execute,a);
+				break;
 			}
 		}
-		if(anti_data_racing==true || freeze==true){
-			raw_msg_bk.push_back("");
-		}
-		if(check_data_racing==true){
-			check_entry.push_back(false);
-		}
-		socketfd.push_back(-1);
-		status.push_back(hast::BUSY);
-		raw_msg.push_back("");
-		thread_list.push_back(nullptr);
-		thread_list[a] = new std::thread(execute,a);
 		thread_mx.unlock();
 	}
 };

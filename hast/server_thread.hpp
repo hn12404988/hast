@@ -15,13 +15,13 @@ namespace hast{
 	protected:
 		server_thread();
 		~server_thread();
-		short int max_amount {0}, recv_thread {-1};
+		short int max_thread {0}, recv_thread {-1};
 		std::mutex thread_mx;
 
-		std::vector<char> status;
-		std::vector<std::thread*> thread_list;
-		std::vector<std::string> raw_msg_bk;
-		std::vector<bool> check_entry;
+		char *status {nullptr};
+		std::thread **thread_list {nullptr};
+		std::string *raw_msg_bk {nullptr};
+		bool *check_entry {nullptr};
 
 		int all_freeze {-1}; //for socket_index
 		int msg_freeze {-1}; //for socket_index
@@ -31,12 +31,13 @@ namespace hast{
 
 		short int get_thread();
 		short int get_thread_no_recv();
+		void init();
 		inline void resize(short int amount);
 		inline void add_thread();
 	public:
 		std::function<void(const short int)> execute {nullptr};
-		std::vector<int> socketfd;
-		std::vector<std::string> raw_msg;
+		int *socketfd {nullptr};
+		std::string *raw_msg {nullptr};
 		bool anti_data_racing {false};
 		bool check_data_racing {false};
 		bool freeze {false};

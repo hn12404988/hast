@@ -28,9 +28,8 @@ namespace hast{
 				anti.clear();
 			}
 			*/
-			b = socketfd.size()-1;
 			wait_amount = 0;
-			for(;b>=0;--b){
+			for(b=0;b<max_thread;++b){
 				if(status[b]==hast::WAIT){
 					++wait_amount;
 				}
@@ -181,10 +180,9 @@ namespace hast{
 					while(section_check>=0){}
 					section_check = socketfd[thread_index];
 					check_str.clear();
-					l = socketfd.size()-1;
-					for(;l>=0;--l){
+					for(l=0;l<max_thread;++l){
 						if(check_entry[l]==true){
-							++l;
+							--l;
 						}
 					}
 					check_str = raw_msg[thread_index];
@@ -233,10 +231,9 @@ namespace hast{
 						freeze_mx.lock();
 						while(all_freeze>=0){}
 						all_freeze = socketfd[thread_index];
-						l = socketfd.size()-1;
-						for(;l>=0;--l){
+						for(l=0;l<max_thread;++l){
 							if(status[l]==hast::BUSY && socketfd[l]>=0){
-								++l;
+								--l;
 							}
 						}
 						freeze_mx.unlock();
@@ -250,10 +247,9 @@ namespace hast{
 						while(msg_freeze>=0){}
 						msg_freeze = socketfd[thread_index];
 						freeze_str = raw_msg[thread_index];
-						l = socketfd.size()-1;
-						for(;l>=0;--l){
+						for(l=0;l<max_thread;++l){
 							if(status[l]==hast::BUSY && raw_msg_bk[l]==freeze_str){
-								++l;
+								--l;
 							}
 						}
 						freeze_mx.unlock();
@@ -277,15 +273,20 @@ namespace hast{
 	}
 
 	void socket_server::close_socket(const int socket_index){
-		int a;
+		if(socket_index<0){
+			return;
+		}
+		short int a;
 		shutdown(socket_index,SHUT_RDWR);
 		close(socket_index);
 		epoll_ctl(epollfd, EPOLL_CTL_DEL, socket_index,nullptr);
-		a = socketfd.size()-1;
-		for(;a>=0;--a){
+		for(a=0;a<max_thread;++a){
 			if(socketfd[a]==socket_index){
 				break;
 			}
+		}
+		if(a==max_thread){
+			a = -1;
 		}
 		if(check_data_racing==true){
 			if(section_check==socket_index){

@@ -1,5 +1,12 @@
 bool tcp_server::init(hast::tcp_socket::port port, short int unsigned max){
-	max_amount = max;
+	if(max==0){
+		return false;
+	}
+	if(anti_data_racing==true && max==1){
+		return false;
+	}
+	max_thread = max;
+	server_thread::init();
 	if(getaddrinfo(NULL, port.c_str(), &hints, &res)!=0){
 		return false;
 	}

@@ -10,7 +10,7 @@ private:
 public:
 unix_server():
 	socket_server(){}
-	bool init(const char *file,short int unsigned max = 0);
+	bool init(const char *file,short int unsigned max = 2);
 };
 
 #include <hast/unix_server.cpp>

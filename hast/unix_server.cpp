@@ -1,5 +1,12 @@
 bool unix_server::init(const char *file, short int unsigned max){
-	max_amount = max;
+	if(max==0){
+		return false;
+	}
+	if(anti_data_racing==true && max==1){
+		return false;
+	}
+	max_thread = max;
+	server_thread::init();
 	int flag {1},i;
 	std::string socket_name;
 	socket_name.append(file);
