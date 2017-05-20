@@ -19,7 +19,7 @@ auto execute = [&](const short int index){
 
 int main(){
 	server.execute = execute; //Bind the lambda function to the server.
-	if(server.init(__FILE__)==false){ //Name of this file as the name of socket file. (.cpp will be change to .socket)
+	if(server.init(__FILE__,3)==false){ //Name of this file as the name of socket file. (.cpp will be change to .socket)
 		std::cout << "Server can't init at file: " << __FILE__ << std::endl;
 	}
 	else{

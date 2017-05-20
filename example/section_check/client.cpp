@@ -39,7 +39,7 @@ int main(){
 	}
 	std::this_thread::sleep_for(std::chrono::milliseconds(2000));
 	if(c1.uncheck(to_s1)==0){
-		std::cout << "/****** c1 unfreeze server successfully ********/" << std::endl;
+		std::cout << "/****** c1 uncheck server successfully ********/" << std::endl;
 	}
 	else{
 		std::cout << "/****** c1 fail on unfreezing server ********/" << std::endl;

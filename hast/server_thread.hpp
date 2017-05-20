@@ -23,9 +23,9 @@ namespace hast{
 		std::vector<std::string> raw_msg_bk;
 		std::vector<bool> check_entry;
 
-		short int all_freeze {-1}; //for socket_index
-		short int msg_freeze {-1}; //for socket_index
-		short int section_check {-1}; //for socket_index
+		int all_freeze {-1}; //for socket_index
+		int msg_freeze {-1}; //for socket_index
+		int section_check {-1}; //for socket_index
 		std::string check_str {"<>"};
 		std::string freeze_str {"!"};
 

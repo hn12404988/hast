@@ -104,7 +104,8 @@ namespace hast{
 			else{
 				a = socketfd.size();
 				if(max_amount>0){
-					if(all_freeze==-1 && msg_freeze==-1 && section_check==-1){
+					if(anti_data_racing==true || check_data_racing==true || freeze==true){}
+					else{
 						if(a>=max_amount){
 							thread_mx.unlock();
 							return;

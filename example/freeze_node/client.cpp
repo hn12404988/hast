@@ -13,7 +13,7 @@ int main(){
 	location.push_back("server.socket");
 	c1.import_location(&location);
 	c2.import_location(&location);
-	msg = "freeze"; // change to (msg = '!') will let all thread in server freeze
+	msg = "freeze"; // change to (msg = '!') will freeze all thread in server
 	error_flag = c1.fireNfreeze(to_s1,msg);
 	if(error_flag==0){
 		std::cout << "/****** c1 freeze server by msg successfully ********/" << std::endl;

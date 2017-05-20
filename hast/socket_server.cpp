@@ -31,11 +31,7 @@ namespace hast{
 			b = socketfd.size()-1;
 			wait_amount = 0;
 			for(;b>=0;--b){
-				if(status[b]==hast::READ){
-					++b;
-					continue;
-				}
-				else if(status[b]==hast::WAIT){
+				if(status[b]==hast::WAIT){
 					++wait_amount;
 				}
 			}
@@ -200,22 +196,40 @@ namespace hast{
 			if(freeze==true){
 				raw_msg_bk[thread_index] = raw_msg[thread_index];
 				if(raw_msg[thread_index].back()=='!'){
+					/**
+					 * This msg is just a signal. To `all-freeze`, `partial-freeze` or `unfreeze` this node.
+					 **/
 					if(raw_msg[thread_index].length()==1){
+						/**
+						 * This is a `unfreeze` signal.
+						 **/
 						if(all_freeze==socketfd[thread_index]){
+							/**
+							 * This node is frozen by msg `!!`, which is `all-freeze`. 
+							 **/
 							all_freeze = -1;
 							send(socketfd[thread_index], "1", 1,0);
 						}
 						else if(msg_freeze==socketfd[thread_index]){
+							/**
+							 * This node is frozen by msg `[msg]!`, which is `partial-freeze`. 
+							 **/
 							freeze_str = "!";
 							msg_freeze = -1;
 							send(socketfd[thread_index], "1", 1,0);
 						}
 						else{
+							/**
+							 * Something wrong.
+							 **/
 							send(socketfd[thread_index], "0", 1,0);
 						}
 						continue;
 					}
 					if(raw_msg[thread_index]=="!!"){
+						/**
+						 * This is a `all-freeze` signal.
+						 **/
 						freeze_mx.lock();
 						while(all_freeze>=0){}
 						all_freeze = socketfd[thread_index];
@@ -228,6 +242,9 @@ namespace hast{
 						freeze_mx.unlock();
 					}
 					else{
+						/**
+						 * This is a `partial-freeze` signal.
+						 **/
 						raw_msg[thread_index].pop_back();
 						freeze_mx.lock();
 						while(msg_freeze>=0){}
@@ -244,6 +261,9 @@ namespace hast{
 					send(socketfd[thread_index], "1", 1,0);
 					continue;
 				}
+				/**
+				 * Here is the place where msg wait for permission.
+				 **/
 				while(raw_msg[thread_index]==freeze_str){}
 				while(all_freeze>=0){}
 			}
