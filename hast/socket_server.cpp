@@ -111,13 +111,10 @@ namespace hast{
 			if(status[recv_thread]!=hast::WAIT){
 				break;
 			}
-			std::cout << "recv_epoll a : " << a << std::endl;
 			--a;
 			for(;a>=0;--a){
 				c = events[a].data.fd;
-				std::cout << "recv_epoll c : " << c << std::endl;
 				if(events[a].events!=1){
-					std::cout << "recv_epoll close: " << c << std::endl;
 					epoll_ctl(epollfd, EPOLL_CTL_DEL, c,nullptr);
 					shutdown(c,SHUT_RDWR);
 					close(c);
@@ -127,7 +124,6 @@ namespace hast{
 					continue;
 				}
 				b = get_thread();
-				std::cout << "recv_epoll b: " << b << std::endl;
 				if(b==-1){
 					break;
 				}
@@ -171,14 +167,11 @@ namespace hast{
 			}
 			status[thread_index] = hast::WAIT;
 			if(recv_thread==-1){
-				std::cout << "recv: " << thread_index << std::endl;
 				recv_thread = thread_index;
 				thread_mx.unlock();
 				recv_epoll();
-				std::cout << "recv over: " << thread_index << std::endl;
 			}
 			else{
-				std::cout << "no recv: " << thread_index << std::endl;
 				thread_mx.unlock();
 			}
 			for(;;){
@@ -212,7 +205,6 @@ namespace hast{
 			got_it = true;
 			int l;
 			if(status[thread_index]==hast::READ){
-				std::cout << "GOT IT READ: " << thread_index << std::endl;
 				char new_char[transport_size];
 				for(;;){
 					l = recv(socketfd[thread_index], new_char, transport_size, 0);
@@ -225,17 +217,12 @@ namespace hast{
 				}
 				if(raw_msg[thread_index]==""){
 					//client close connection.
-					std::cout << "READ CLOSE id: " << thread_index << std::endl;
-					std::cout << "READ CLOSE fd: " << socketfd[thread_index] << std::endl;
 					close_socket(socketfd[thread_index]);
 					continue;
 				}
 			}
 			else{
-				std::cout << "GOT IT READ_PREFIX: " << thread_index << std::endl;
 			}
-			std::cout << "GOT fd: " << socketfd[thread_index] << std::endl;
-			std::cout << "MSG: " << raw_msg[thread_index] << std::endl;
 			if(section_check==true){
 				if(raw_msg[thread_index][0]=='<' && raw_msg[thread_index].back()=='>'){
 					/**
@@ -579,8 +566,6 @@ namespace hast{
 					//This `section-check` is too long, so abandon this `section-check`.
 					section_check_fd = -1;
 					check_str = "<>";
-					std::cout << "check_id: " << section_check_id << std::endl;
-					std::cout << "thread_id: " << thread_index << std::endl;
 					if(section_check_id==thread_index){
 						//Lock thread is here, so unlock and clean this signal asap.
 						check_mx.unlock();
