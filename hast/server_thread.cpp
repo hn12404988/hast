@@ -35,13 +35,13 @@ namespace hast{
 			raw_msg[a] = "";
 			socketfd[a] = -1;
 		}
-		if(anti_data_racing==true || freeze==true){
+		if(anti_data_racing==true){
 			raw_msg_bk = new std::string [max_thread];
 			for(a=0;a<max_thread;++a){
 				raw_msg_bk[a] = "";
 			}
 		}
-		if(check_data_racing==true){
+		if(section_check==true){
 			check_entry = new bool [max_thread];
 			for(a=0;a<max_thread;++a){
 				check_entry[a] = false;
@@ -56,10 +56,12 @@ namespace hast{
 				continue;
 			}
 			if(status[a]==hast::WAIT && thread_list[a]!=nullptr){
-				if(amount>0){
-					status[a] = hast::RECYCLE;
-					--amount;
-					continue;
+				if(msg_freeze_id!=a && section_check_id!=a){
+					if(amount>0){
+						status[a] = hast::RECYCLE;
+						--amount;
+						continue;
+					}
 				}
 			}
 			else if(status[a]==hast::RECYCLE){
@@ -68,6 +70,7 @@ namespace hast{
 					delete thread_list[a];
 					thread_list[a] = nullptr;
 					status[a] = hast::BUSY;
+					socketfd[a] = -1;
 				}
 				else{
 					//TODO Something Wrong
@@ -78,6 +81,20 @@ namespace hast{
 
 	short int server_thread::get_thread(){
 		thread_mx.lock();
+		if(msg_freeze_id>=0){
+			if(status[msg_freeze_id]==hast::WAIT){
+				status[msg_freeze_id] = hast::GET;
+				thread_mx.unlock();
+				return msg_freeze_id;
+			}
+		}
+		if(section_check_id>=0){
+			if(status[section_check_id]==hast::WAIT){
+				status[section_check_id] = hast::GET;
+				thread_mx.unlock();
+				return section_check_id;
+			}
+		}
 		short int a {0};
 		for(;a<max_thread;++a){
 			if(recv_thread==a){
@@ -92,6 +109,9 @@ namespace hast{
 				a = recv_thread;
 				status[a] = hast::GET;
 			}
+			else{
+				a = -1;
+			}
 		}
 		else{
 			status[a] = hast::GET;
@@ -102,6 +122,20 @@ namespace hast{
 
 	short int server_thread::get_thread_no_recv(){
 		thread_mx.lock();
+		if(msg_freeze_id>=0){
+			if(status[msg_freeze_id]==hast::WAIT){
+				status[msg_freeze_id] = hast::GET;
+				thread_mx.unlock();
+				return msg_freeze_id;
+			}
+		}
+		if(section_check_id>=0){
+			if(status[section_check_id]==hast::WAIT){
+				status[section_check_id] = hast::GET;
+				thread_mx.unlock();
+				return section_check_id;
+			}
+		}
 		short int a {0};
 		for(;a<max_thread;++a){
 			if(recv_thread==a){

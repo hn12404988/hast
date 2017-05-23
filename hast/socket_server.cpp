@@ -10,24 +10,62 @@ namespace hast{
 		close(epollfd);
 	}
 
+	void socket_server::set_topology_wait(short int unsigned time){
+		topology_wait = time;
+	}
+	
 	void socket_server::done(const short int thread_index){
 		/**
 		 * This is here for threads break msg_recv loop accidentally.
-		 * Threads are only allowed to break msg_recv loop by get 'false' from it.
+		 * Threads are only allowed to break msg_recv loop by getting 'false' from it.
 		 **/
 		status[thread_index] = hast::RECYCLE;
 	}
 
+	bool socket_server::pending_first(){
+		int amount;
+		amount = pending_fd.size();
+		if(amount>0){
+			wait_mx.unlock();
+		}
+		else{
+			return false;
+		}
+		short int b;
+		while(pending_fd.size()>0){
+			b = get_thread();
+			if(b==-1){
+				break;
+			}
+			raw_msg[b] = pending_msg.front();
+			socketfd[b] = pending_fd.front();
+			pending_msg.pop_front();
+			pending_fd.pop_front();
+			got_it = false;
+			status[b] = hast::READ_PREFIX;
+			if(b!=recv_thread){
+				while(got_it==false){}
+			}
+		}
+		return true;
+	}
+	
 	inline void socket_server::recv_epoll(){
 		short int a,b,wait_amount {0};
 		int c,loop_amount {0};
 		while(got_it==false){}
 		for(;;){
 			/* TODO Find a way to clear `anti`.
-			if(alive_thread==1){
-				anti.clear();
-			}
+			   if(alive_thread==1){
+			   anti.clear();
+			   }
 			*/
+			if(msg_freeze_fd==-1 && section_check_fd==-1){
+				pending_first();
+				if(status[recv_thread]!=hast::WAIT){
+					break;
+				}
+			}
 			wait_amount = 0;
 			for(b=0;b<max_thread;++b){
 				if(status[b]==hast::WAIT){
@@ -50,15 +88,37 @@ namespace hast{
 			}
 			for(;;){
 				a = epoll_wait(epollfd, events, MAX_EVENTS, 3500);
+				if(msg_freeze_fd==-1 && section_check_fd==-1){
+					if(pending_first()==true){
+						if(status[recv_thread]==hast::WAIT){
+							if(a>0){
+								break;
+							}
+							else{
+								wait_mx.lock();
+								continue;
+							}
+						}
+						else{
+							break;
+						}
+					}
+				}
 				if(a>0){
 					wait_mx.unlock();
 					break;
 				}
 			}
+			if(status[recv_thread]!=hast::WAIT){
+				break;
+			}
+			std::cout << "recv_epoll a : " << a << std::endl;
 			--a;
 			for(;a>=0;--a){
 				c = events[a].data.fd;
+				std::cout << "recv_epoll c : " << c << std::endl;
 				if(events[a].events!=1){
+					std::cout << "recv_epoll close: " << c << std::endl;
 					epoll_ctl(epollfd, EPOLL_CTL_DEL, c,nullptr);
 					shutdown(c,SHUT_RDWR);
 					close(c);
@@ -68,6 +128,7 @@ namespace hast{
 					continue;
 				}
 				b = get_thread();
+				std::cout << "recv_epoll b: " << b << std::endl;
 				if(b==-1){
 					break;
 				}
@@ -102,10 +163,10 @@ namespace hast{
 			anti[raw_msg_bk[thread_index]].unlock();
 		}
 		for(;;){
-			if(anti_data_racing==true || freeze==true){
+			if(anti_data_racing==true){
 				raw_msg_bk[thread_index].clear();
 			}
-			if(check_data_racing==true){
+			if(section_check==true){
 				check_entry[thread_index] = false;
 			}
 			raw_msg[thread_index].clear();
@@ -117,15 +178,18 @@ namespace hast{
 			}
 			status[thread_index] = hast::WAIT;
 			if(recv_thread==-1){
+				std::cout << "recv: " << thread_index << std::endl;
 				recv_thread = thread_index;
 				thread_mx.unlock();
 				recv_epoll();
+				std::cout << "recv over: " << thread_index << std::endl;
 			}
 			else{
+				std::cout << "no recv: " << thread_index << std::endl;
 				thread_mx.unlock();
 			}
 			for(;;){
-				if(status[thread_index]==hast::READ){
+				if(status[thread_index]==hast::READ || status[thread_index]==hast::READ_PREFIX){
 					break;
 				}
 				else if(status[thread_index]==hast::RECYCLE){
@@ -141,127 +205,246 @@ namespace hast{
 					wait_mx.unlock();
 				}
 			}
+			if(msg_freeze_fd==-1 && msg_freeze_id==thread_index){
+				freeze_mx.unlock();
+				msg_freeze_id = -1;
+			}
+			if(section_check_fd==-1 && section_check_id==thread_index){
+				check_mx.unlock();
+				section_check_id = -1;
+			}
 			if(status[thread_index]==hast::WAIT){
 				continue;
 			}
 			got_it = true;
 			int l;
-			char new_char[transport_size];
-			for(;;){
-				l = recv(socketfd[thread_index], new_char, transport_size, 0);
-				if(l>0){
-					raw_msg[thread_index].append(new_char,l);
-				}
-				else{
-					break;
-				}
-			}
-			if(raw_msg[thread_index]==""){
-				//client close connection.
-				close_socket(socketfd[thread_index]);
-				continue;
-			}
-			if(check_data_racing==true){
-				if(raw_msg[thread_index][0]=='<' && raw_msg[thread_index].back()=='>'){
-					if(raw_msg[thread_index].length()==2){
-						if(section_check==socketfd[thread_index]){
-							check_str = "<>";
-							section_check = -1;
-							send(socketfd[thread_index], "1", 1,0);
-						}
-						else{
-							send(socketfd[thread_index], "0", 1,0);
-						}
-						continue;
+			if(status[thread_index]==hast::READ){
+				std::cout << "GOT IT READ: " << thread_index << std::endl;
+				char new_char[transport_size];
+				for(;;){
+					l = recv(socketfd[thread_index], new_char, transport_size, 0);
+					if(l>0){
+						raw_msg[thread_index].append(new_char,l);
 					}
-					raw_msg[thread_index].pop_back();
-					raw_msg[thread_index] = raw_msg[thread_index].substr(1);
-					check_mx.lock();
-					while(section_check>=0){}
-					section_check = socketfd[thread_index];
-					check_str.clear();
-					for(l=0;l<max_thread;++l){
-						if(check_entry[l]==true){
-							--l;
-						}
+					else{
+						break;
 					}
-					check_str = raw_msg[thread_index];
-					check_mx.unlock();
-					send(socketfd[thread_index], "1", 1,0);
+				}
+				if(raw_msg[thread_index]==""){
+					//client close connection.
+					std::cout << "READ CLOSE id: " << thread_index << std::endl;
+					std::cout << "READ CLOSE fd: " << socketfd[thread_index] << std::endl;
+					close_socket(socketfd[thread_index]);
 					continue;
 				}
 			}
-			if(freeze==true){
-				raw_msg_bk[thread_index] = raw_msg[thread_index];
+			else{
+				std::cout << "GOT IT READ_PREFIX: " << thread_index << std::endl;
+			}
+			std::cout << "GOT fd: " << socketfd[thread_index] << std::endl;
+			std::cout << "MSG: " << raw_msg[thread_index] << std::endl;
+			if(section_check==true){
+				if(raw_msg[thread_index][0]=='<' && raw_msg[thread_index].back()=='>'){
+					/**
+					 * signal
+					 **/
+					if(raw_msg[thread_index].length()==2){
+						// `uncheck` signal
+						if(section_check_fd==socketfd[thread_index]){
+							section_check_fd = -1;
+							check_str = "<>";
+							send(socketfd[thread_index], "1", 1,0);
+						}
+						else{
+							//Something wrong, mainly because the time of check period exceed `topology_wait`.
+							send(socketfd[thread_index], "0{\"Error\":\"uncheck fail\"}", 25,0);
+						}
+						if(section_check_id==thread_index){
+							check_mx.unlock();
+							section_check_id = -1;
+						}
+					}
+					else{
+						//`check` signal
+						if(check_mx.try_lock()==true){
+							//No another signal is `section checking`, so this signal can start to initiate.
+							raw_msg[thread_index].pop_back();
+							raw_msg[thread_index] = raw_msg[thread_index].substr(1);
+						}
+						else{
+							if(section_check_fd==-1){
+								//Last signal is over but mutex is locked.
+								if(section_check_id==thread_index){
+									//This thread is here again, so keep locking anyway.
+									raw_msg[thread_index].pop_back();
+									raw_msg[thread_index] = raw_msg[thread_index].substr(1);
+								}
+								else{
+									//Need lock thread to deal with this msg, so pending this signal
+									pending_fd.push_back(socketfd[thread_index]);
+									pending_msg.push_back(raw_msg[thread_index]);
+									socketfd[thread_index] = -1; //Don't open epoll
+									//TODO echo back how long should that client wait.
+									continue;
+								}
+							}
+							else{
+								//There is a signal is `section-checking`, so pending this signal.
+								pending_fd.push_back(socketfd[thread_index]);
+								pending_msg.push_back(raw_msg[thread_index]);
+								socketfd[thread_index] = -1; //Don't open epoll
+								//TODO echo back how long should that client wait.
+								continue;
+							}
+						}
+						section_check_fd = socketfd[thread_index];
+						section_check_id = thread_index;
+						check_str.clear();
+						for(l=0;l<max_thread;++l){
+							if(check_entry[l]==true){
+								--l;
+							}
+						}
+						check_str = raw_msg[thread_index];
+						//check_mx.unlock();
+						send(socketfd[thread_index], "1", 1,0);
+					}
+					continue;
+				}
+			}
+			if(msg_freeze==true){
 				if(raw_msg[thread_index].back()=='!'){
 					/**
-					 * This msg is just a signal. To `all-freeze`, `partial-freeze` or `unfreeze` this node.
+					 * This msg is just a signal.
 					 **/
 					if(raw_msg[thread_index].length()==1){
 						/**
 						 * This is a `unfreeze` signal.
 						 **/
-						if(all_freeze==socketfd[thread_index]){
-							/**
-							 * This node is frozen by msg `!!`, which is `all-freeze`. 
-							 **/
-							all_freeze = -1;
-							send(socketfd[thread_index], "1", 1,0);
-						}
-						else if(msg_freeze==socketfd[thread_index]){
-							/**
-							 * This node is frozen by msg `[msg]!`, which is `partial-freeze`. 
-							 **/
+						if(msg_freeze_fd==socketfd[thread_index]){
+							msg_freeze_fd = -1;
 							freeze_str = "!";
-							msg_freeze = -1;
 							send(socketfd[thread_index], "1", 1,0);
 						}
 						else{
-							/**
-							 * Something wrong.
-							 **/
-							send(socketfd[thread_index], "0", 1,0);
+							//Something wrong, mainly because the time of check period exceed `topology_wait`.
+							send(socketfd[thread_index], "0{\"Error\":\"unfreeze fail\"}", 26,0);
 						}
-						continue;
+						if(msg_freeze_id==thread_index){
+							freeze_mx.unlock();
+							msg_freeze_id = -1;
+						}
 					}
-					if(raw_msg[thread_index]=="!!"){
+					else{
 						/**
-						 * This is a `all-freeze` signal.
+						 * This is a `freeze` signal.
 						 **/
-						freeze_mx.lock();
-						while(all_freeze>=0){}
-						all_freeze = socketfd[thread_index];
+						if(freeze_mx.try_lock()==true){
+							//No another signal is in `freeze`, so this signal can start to initiate.
+							raw_msg[thread_index].pop_back();
+						}
+						else{
+							if(msg_freeze_fd==-1){
+								//Last signal is over but mutex is locked.
+								if(msg_freeze_id==thread_index){
+									//This thread is here again, so keep locking anyway.
+									raw_msg[thread_index].pop_back();
+								}
+								else{
+									//Need lock thread to deal with this msg, so pending this signal.
+									pending_fd.push_back(socketfd[thread_index]);
+									pending_msg.push_back(raw_msg[thread_index]);
+									socketfd[thread_index] = -1; //Don't open epoll
+									//TODO echo back how long should that client wait.
+									//pending first
+									continue;
+								}
+							}
+							else{
+								//There is a signal is in `freeze`, so pending this signal.
+								pending_fd.push_back(socketfd[thread_index]);
+								pending_msg.push_back(raw_msg[thread_index]);
+								socketfd[thread_index] = -1; //Don't open epoll
+								//TODO echo back how long should that client wait.
+								continue;
+							}
+						}
+						if(raw_msg[thread_index]=="!"){
+							freeze_str.clear();
+							msg_freeze_id = thread_index;
+						}
+						else{
+							freeze_str = raw_msg[thread_index];
+							msg_freeze_id = -1;
+						}
+						msg_freeze_fd = socketfd[thread_index];
 						for(l=0;l<max_thread;++l){
 							if(status[l]==hast::BUSY && socketfd[l]>=0){
 								--l;
 							}
 						}
-						freeze_mx.unlock();
-					}
-					else{
-						/**
-						 * This is a `partial-freeze` signal.
-						 **/
-						raw_msg[thread_index].pop_back();
-						freeze_mx.lock();
-						while(msg_freeze>=0){}
-						msg_freeze = socketfd[thread_index];
-						freeze_str = raw_msg[thread_index];
-						for(l=0;l<max_thread;++l){
-							if(status[l]==hast::BUSY && raw_msg_bk[l]==freeze_str){
-								--l;
-							}
+						if(msg_freeze_fd==socketfd[thread_index]){
+							send(socketfd[thread_index], "1", 1,0);
 						}
-						freeze_mx.unlock();
+						else{
+							send(socketfd[thread_index], "0{\"Error\":\"init too long\"}", 26,0);
+							msg_freeze_fd = -1;
+							freeze_str = "!";
+							msg_freeze_id = -1;
+						}
+						if(freeze_str.length()>0){
+							// `msg_freeze` doesn't use mutex.
+							freeze_mx.unlock();
+						}
 					}
-					send(socketfd[thread_index], "1", 1,0);
 					continue;
 				}
 				/**
-				 * Here is the place where msg wait for permission.
+				 * Here is the place where msg pass through or back to pending list.
 				 **/
-				while(raw_msg[thread_index]==freeze_str){}
-				while(all_freeze>=0){}
+				if(msg_freeze_fd>=0){
+					if(freeze_str.length()==0){ //freeze_str==""
+						//all-freeze
+						if(msg_freeze_id==thread_index){
+							pending_fd.push_back(socketfd[thread_index]);
+							pending_msg.push_back(raw_msg[thread_index]);
+							socketfd[thread_index] = -1; //Don't open epoll
+							continue;
+						}
+						else{
+							if(freeze_mx.try_lock_for(std::chrono::milliseconds(topology_wait))==false){
+								//This `all-freeze` is too long, so abandon this `freeze`.
+								msg_freeze_fd = -1;
+								freeze_str = "!";
+								if(msg_freeze_id==thread_index){
+									freeze_mx.unlock();
+									msg_freeze_id = -1;
+								}
+							}
+							else{
+								freeze_mx.unlock();
+							}
+						}
+					}
+					else{
+						//msg-freeze
+						freeze_mx.lock(); //Wait for signal's initiation
+						freeze_mx.unlock(); //Wait for signal's initiation
+						if(raw_msg[thread_index]==freeze_str){
+							pending_fd.push_back(socketfd[thread_index]);
+							pending_msg.push_back(raw_msg[thread_index]);
+							socketfd[thread_index] = -1; //Don't open epoll
+							continue;
+						}
+					}
+				}
+				else{
+					if(msg_freeze_id==thread_index){
+						//Lock thread is here, so unlock and clean this signal asap.
+						freeze_mx.unlock();
+						msg_freeze_id = -1;
+					}
+				}
 			}
 			if(anti_data_racing==true){
 				raw_msg_bk[thread_index] = raw_msg[thread_index];
@@ -288,25 +471,29 @@ namespace hast{
 		if(a==max_thread){
 			a = -1;
 		}
-		if(check_data_racing==true){
-			if(section_check==socket_index){
+		if(section_check==true){
+			if(section_check_fd==socket_index){
+				section_check_fd = -1;
 				check_str = "<>";
-				section_check = -1;
 			}
 			if(a>=0){
+				if(section_check_id==a){
+					check_mx.unlock();
+					section_check_id = -1;
+				}
 				check_entry[a] = false;
 			}
 		}
-		if(freeze==true){
-			if(all_freeze==socket_index){
-				all_freeze = -1;
-			}
-			if(msg_freeze==socket_index){
-				msg_freeze = -1;
+		if(msg_freeze==true){
+			if(msg_freeze_fd==socket_index){
+				msg_freeze_fd = -1;
 				freeze_str = "!";
 			}
 			if(a>=0){
-				raw_msg_bk[a].clear();
+				if(msg_freeze_id==a){
+					freeze_mx.unlock();
+					msg_freeze_id = -1;
+				}
 			}
 		}
 		if(anti_data_racing==true){
@@ -376,10 +563,48 @@ namespace hast{
 	}
 
 	inline void socket_server::check_in(const short int thread_index, std::string &msg){
-		while(section_check>=0){
-			while(check_str==""){}
-			while(msg==check_str){}
-			break;
+		if(section_check_fd>=0){
+			while(check_str==""){
+				//signal is initiating
+			}
+			/**
+			 * if(section_check_id==thread_index){
+			 *     This thread is the thread received this `section-check` signal,
+			 *     and lock `check_mx` mutex. It means that if this thread try_lock_for()
+			 *     `check_mx` mutex will cause `undefined behavior`.
+			 *     But gcc 5.4 will let this situation act like any other thread, so we
+			 *     let all thread do the same thing here.
+			 *     Please keep in mind that each compiler may have different behavior here.
+			 * }
+			 * else{
+			 *     Other threads.
+			 * }
+			 **/
+			if(check_str==raw_msg[thread_index]){
+				if(check_mx.try_lock_for(std::chrono::milliseconds(topology_wait))==false){
+					//This `section-check` is too long, so abandon this `section-check`.
+					section_check_fd = -1;
+					check_str = "<>";
+					std::cout << "check_id: " << section_check_id << std::endl;
+					std::cout << "thread_id: " << thread_index << std::endl;
+					if(section_check_id==thread_index){
+						//Lock thread is here, so unlock and clean this signal asap.
+						check_mx.unlock();
+						section_check_id = -1;
+					}
+				}
+				else{
+					//`section-check` is over.
+					check_mx.unlock();
+				}
+			}
+		}
+		else{
+			if(section_check_id==thread_index){
+				//Lock thread is here, so unlock and clean this signal asap.
+				check_mx.unlock();
+				section_check_id = -1;
+			}
 		}
 		check_entry[thread_index] = true;
 	}

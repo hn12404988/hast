@@ -3,6 +3,7 @@
 #include <hast/server_thread.hpp>
 #include <cstring>
 #include <map>
+#include <list>
 
 #define MAX_EVENTS 10
 namespace hast{
@@ -11,16 +12,29 @@ namespace hast{
 		struct sockaddr_storage client_addr;
 		socklen_t client_addr_size;
 		int epollfd;
+		short int unsigned topology_wait {2000};
 		bool got_it {true};
 		const int listen_pending{50};
 		const int transport_size{100};
 		const int resize_while_loop{20};
 		struct epoll_event ev,ev_tmp, events[MAX_EVENTS];
 		int host_socket {0};
-	
-		std::mutex wait_mx,freeze_mx,check_mx;
+
+		std::list<int> pending_fd;
+		std::list<std::string> pending_msg;
+		//bool pending_first {false};
+		std::mutex wait_mx;
+		std::timed_mutex check_mx,freeze_mx;
 		std::map<std::string,std::mutex> anti;
 
+		std::string check_str {"<>"};
+		std::string freeze_str {"!"};
+
+		/**
+		 * RETURN true:  At least one pending is sending out.
+		 * RETURN false: No pending was sent out.
+		 **/
+		bool pending_first();
 		void close_socket(const int socket_index);
 		inline void recv_epoll();
 	
@@ -30,6 +44,7 @@ namespace hast{
 		~socket_server();
 		bool msg_recv(const short int thread_index);
 		void start_accept();
+		void set_topology_wait(short int unsigned time);
 		void done(const short int thread_index);
 		void close_socket(const short int thread_index);
 		int get_socket(short int thread_index);

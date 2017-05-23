@@ -252,7 +252,7 @@ short int client_thread::fire(short int &location_index,std::string &msg){
 			if(str[0]=='0'){
 				str = reply_error_send(location_index, msg,str);
 				client_thread::error_fire(str);
-				msg = "0";
+				//msg = "0"; Don't show error msg to client. Do this while on production.
 			}
 			else{
 				msg = str;
@@ -295,8 +295,9 @@ short int client_thread::fireNfreeze(short int &location_index,std::string &msg)
 }
 
 short int client_thread::unfreeze(short int &location_index){
-	str = "!";
-	return client_thread::fire(location_index,str);
+	std::string tmp_msg {"!"};
+	//str = "!";
+	return client_thread::fire(location_index,tmp_msg);
 }
 
 short int client_thread::fireNcheck(short int &location_index,std::string &msg){
@@ -310,8 +311,9 @@ short int client_thread::fireNcheck(short int &location_index,std::string &msg){
 }
 
 short int client_thread::uncheck(short int &location_index){
-	str = "<>";
-	return client_thread::fire(location_index,str);
+	std::string tmp_msg {"<>"};
+	//str = "<>";
+	return client_thread::fire(location_index,tmp_msg);
 }
 
 inline void client_thread::search_runner(short int &location_index){

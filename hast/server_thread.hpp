@@ -23,11 +23,10 @@ namespace hast{
 		std::string *raw_msg_bk {nullptr};
 		bool *check_entry {nullptr};
 
-		int all_freeze {-1}; //for socket_index
-		int msg_freeze {-1}; //for socket_index
-		int section_check {-1}; //for socket_index
-		std::string check_str {"<>"};
-		std::string freeze_str {"!"};
+		int msg_freeze_fd {-1};
+		short int msg_freeze_id {-1};
+		int section_check_fd {-1};
+		short int section_check_id {-1};
 
 		short int get_thread();
 		short int get_thread_no_recv();
@@ -39,8 +38,8 @@ namespace hast{
 		int *socketfd {nullptr};
 		std::string *raw_msg {nullptr};
 		bool anti_data_racing {false};
-		bool check_data_racing {false};
-		bool freeze {false};
+		bool section_check {false};
+		bool msg_freeze {false};
 	};
 };
 #include <hast/server_thread.cpp>

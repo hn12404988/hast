@@ -5,14 +5,12 @@ unix_server server;
 auto execute = [&](const short int index){
 	std::string str;
 	while(server.msg_recv(index)==true){
-		std::cout << "/****** Server Success ********/" << std::endl;
-		std::cout << "/****** Check-In ********/" << std::endl;
+		std::cout << "Thread: " << index << std::endl;
+		std::cout << "MSG: " << server.raw_msg[index] << std::endl;
 		server.check_in(index,server.raw_msg[index]);
-		std::cout << "recv in thread: " << index << std::endl;
-		std::cout << "msg is: " << server.raw_msg[index] << std::endl;
+		std::cout << "check in: " << index << std::endl;
 		server.check_out(index);
-		std::cout << "/****** Check-Out ********/" << std::endl;
-		std::cout << "/******************************/" << std::endl;
+		std::cout << "check out: " << index << std::endl;
 		server.echo_back_msg(index,"Got it!");
 	}
 	server.done(index);
@@ -21,8 +19,8 @@ auto execute = [&](const short int index){
 
 int main(){
 	server.execute = execute;
-	server.check_data_racing = true;
-	if(server.init(__FILE__)==false){
+	server.section_check = true;
+	if(server.init(__FILE__,2)==false){
 		std::cout << "Server can't init at file: " << __FILE__ << std::endl;
 	}
 	else{

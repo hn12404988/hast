@@ -250,7 +250,6 @@ short int client_core::fire(short int &location_index,std::string &msg){
 		}
 		else{
 			if(str[0]=='0'){
-				msg = str;//Don't show error msg to client. Do this while on production.
 				str = reply_error_send(location_index, msg,str);
 				error_fire(str);
 				//msg = "0"; Don't show error msg to client. Do this while on production.
@@ -346,8 +345,9 @@ short int client_core::fireNfreeze(short int &location_index,std::string &msg){
 }
 
 short int client_core::unfreeze(short int &location_index){
-	str = "!";
-	return fire(location_index,str);
+	std::string tmp_msg {"!"};
+	//str = "!";
+	return fire(location_index,tmp_msg);
 }
 
 short int client_core::fireNcheck(short int &location_index,std::string &msg){
@@ -362,8 +362,9 @@ short int client_core::fireNcheck(short int &location_index,std::string &msg){
 }
 
 short int client_core::uncheck(short int &location_index){
-	str = "<>";
-	return fire(location_index,str);
+	std::string tmp_msg {"<>"};
+	//str = "<>";
+	return fire(location_index,tmp_msg);
 }
 
 inline void client_core::up(){

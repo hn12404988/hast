@@ -8,7 +8,7 @@ int main(){
 	client_core c1;
 	client_thread c2;
 	short int to_s1 {0},error_flag;
-	c2.set_wait_maximum(4);
+	c2.set_wait_maximum(10);
 	std::vector<std::string> location;
 	location.push_back("server.socket");
 	c1.import_location(&location);

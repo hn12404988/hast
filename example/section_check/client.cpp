@@ -37,12 +37,12 @@ int main(){
 	else{
 		std::cout << "/****** c2 fail on fireNforget 'normal msg' ********/" << std::endl;
 	}
-	std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+	std::this_thread::sleep_for(std::chrono::milliseconds(500));
 	if(c1.uncheck(to_s1)==0){
 		std::cout << "/****** c1 uncheck server successfully ********/" << std::endl;
 	}
 	else{
-		std::cout << "/****** c1 fail on unfreezing server ********/" << std::endl;
+		std::cout << "/****** c1 fail on unchecking server ********/" << std::endl;
 	}
 	if(c2.join(to_s1)==true){
 		std::cout << "/****** c2 join successfully ********/" << std::endl;
