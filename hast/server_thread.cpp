@@ -15,9 +15,6 @@ namespace hast{
 			delete [] thread_list;
 			delete [] raw_msg;
 			delete [] socketfd;
-			if(raw_msg_bk!=nullptr){
-				delete [] raw_msg_bk;
-			}
 			if(check_entry!=nullptr){
 				delete [] check_entry;
 			}
@@ -34,12 +31,6 @@ namespace hast{
 			thread_list[a] = nullptr;
 			raw_msg[a] = "";
 			socketfd[a] = -1;
-		}
-		if(anti_data_racing==true){
-			raw_msg_bk = new std::string [max_thread];
-			for(a=0;a<max_thread;++a){
-				raw_msg_bk[a] = "";
-			}
 		}
 		if(section_check==true){
 			check_entry = new bool [max_thread];

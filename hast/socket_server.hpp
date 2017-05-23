@@ -22,7 +22,7 @@ namespace hast{
 
 		std::list<int> pending_fd;
 		std::list<std::string> pending_msg;
-		//bool pending_first {false};
+		int pending_amount {0};
 		std::mutex wait_mx;
 		std::timed_mutex check_mx,freeze_mx;
 		std::map<std::string,std::mutex> anti;
@@ -34,7 +34,7 @@ namespace hast{
 		 * RETURN true:  At least one pending is sending out.
 		 * RETURN false: No pending was sent out.
 		 **/
-		bool pending_first();
+		void pending_first();
 		void close_socket(const int socket_index);
 		inline void recv_epoll();
 	

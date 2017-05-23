@@ -22,17 +22,12 @@ namespace hast{
 		status[thread_index] = hast::RECYCLE;
 	}
 
-	bool socket_server::pending_first(){
-		int amount;
-		amount = pending_fd.size();
-		if(amount>0){
-			wait_mx.unlock();
-		}
-		else{
-			return false;
+	void socket_server::pending_first(){
+		if(pending_amount==0){
+			return;
 		}
 		short int b;
-		while(pending_fd.size()>0){
+		while(pending_amount>0){
 			b = get_thread();
 			if(b==-1){
 				break;
@@ -41,13 +36,13 @@ namespace hast{
 			socketfd[b] = pending_fd.front();
 			pending_msg.pop_front();
 			pending_fd.pop_front();
+			--pending_amount;
 			got_it = false;
 			status[b] = hast::READ_PREFIX;
 			if(b!=recv_thread){
 				while(got_it==false){}
 			}
 		}
-		return true;
 	}
 	
 	inline void socket_server::recv_epoll(){
@@ -55,15 +50,12 @@ namespace hast{
 		int c,loop_amount {0};
 		while(got_it==false){}
 		for(;;){
-			/* TODO Find a way to clear `anti`.
-			   if(alive_thread==1){
-			   anti.clear();
-			   }
-			*/
-			if(msg_freeze_fd==-1 && section_check_fd==-1){
-				pending_first();
-				if(status[recv_thread]!=hast::WAIT){
-					break;
+			if(pending_amount>0){
+				if(msg_freeze_fd==-1 && section_check_fd==-1){
+					pending_first();
+					if(status[recv_thread]!=hast::WAIT){
+						break;
+					}
 				}
 			}
 			wait_amount = 0;
@@ -87,9 +79,16 @@ namespace hast{
 				loop_amount = 0;
 			}
 			for(;;){
-				a = epoll_wait(epollfd, events, MAX_EVENTS, 3500);
-				if(msg_freeze_fd==-1 && section_check_fd==-1){
-					if(pending_first()==true){
+				if(pending_amount==0){
+					a = epoll_wait(epollfd, events, MAX_EVENTS, 3500);
+				}
+				else{
+					a = epoll_wait(epollfd, events, MAX_EVENTS, 1);
+				}
+				if(pending_amount>0){
+					if(msg_freeze_fd==-1 && section_check_fd==-1){
+						wait_mx.unlock();
+						pending_first();
 						if(status[recv_thread]==hast::WAIT){
 							if(a>0){
 								break;
@@ -159,13 +158,7 @@ namespace hast{
 	}
 
 	bool socket_server::msg_recv(const short int thread_index){
-		if(anti_data_racing==true){
-			anti[raw_msg_bk[thread_index]].unlock();
-		}
 		for(;;){
-			if(anti_data_racing==true){
-				raw_msg_bk[thread_index].clear();
-			}
 			if(section_check==true){
 				check_entry[thread_index] = false;
 			}
@@ -249,7 +242,9 @@ namespace hast{
 					 * signal
 					 **/
 					if(raw_msg[thread_index].length()==2){
-						// `uncheck` signal
+						/**
+						 * `uncheck` signal
+						 **/
 						if(section_check_fd==socketfd[thread_index]){
 							section_check_fd = -1;
 							check_str = "<>";
@@ -265,7 +260,9 @@ namespace hast{
 						}
 					}
 					else{
-						//`check` signal
+						/**
+						 * `check` signal
+						 **/
 						if(check_mx.try_lock()==true){
 							//No another signal is `section checking`, so this signal can start to initiate.
 							raw_msg[thread_index].pop_back();
@@ -284,6 +281,7 @@ namespace hast{
 									pending_fd.push_back(socketfd[thread_index]);
 									pending_msg.push_back(raw_msg[thread_index]);
 									socketfd[thread_index] = -1; //Don't open epoll
+									++pending_amount;
 									//TODO echo back how long should that client wait.
 									continue;
 								}
@@ -293,6 +291,7 @@ namespace hast{
 								pending_fd.push_back(socketfd[thread_index]);
 								pending_msg.push_back(raw_msg[thread_index]);
 								socketfd[thread_index] = -1; //Don't open epoll
+								++pending_amount;
 								//TODO echo back how long should that client wait.
 								continue;
 							}
@@ -355,6 +354,7 @@ namespace hast{
 									pending_fd.push_back(socketfd[thread_index]);
 									pending_msg.push_back(raw_msg[thread_index]);
 									socketfd[thread_index] = -1; //Don't open epoll
+									++pending_amount;
 									//TODO echo back how long should that client wait.
 									//pending first
 									continue;
@@ -365,6 +365,7 @@ namespace hast{
 								pending_fd.push_back(socketfd[thread_index]);
 								pending_msg.push_back(raw_msg[thread_index]);
 								socketfd[thread_index] = -1; //Don't open epoll
+								++pending_amount;
 								//TODO echo back how long should that client wait.
 								continue;
 							}
@@ -409,6 +410,7 @@ namespace hast{
 							pending_fd.push_back(socketfd[thread_index]);
 							pending_msg.push_back(raw_msg[thread_index]);
 							socketfd[thread_index] = -1; //Don't open epoll
+							++pending_amount;
 							continue;
 						}
 						else{
@@ -434,6 +436,7 @@ namespace hast{
 							pending_fd.push_back(socketfd[thread_index]);
 							pending_msg.push_back(raw_msg[thread_index]);
 							socketfd[thread_index] = -1; //Don't open epoll
+							++pending_amount;
 							continue;
 						}
 					}
@@ -445,10 +448,6 @@ namespace hast{
 						msg_freeze_id = -1;
 					}
 				}
-			}
-			if(anti_data_racing==true){
-				raw_msg_bk[thread_index] = raw_msg[thread_index];
-				anti[raw_msg[thread_index]].lock();
 			}
 			status[thread_index] = hast::BUSY;
 			return true;
@@ -494,11 +493,6 @@ namespace hast{
 					freeze_mx.unlock();
 					msg_freeze_id = -1;
 				}
-			}
-		}
-		if(anti_data_racing==true){
-			if(a>=0){
-				raw_msg_bk[a].clear();
 			}
 		}
 		if(a>=0){

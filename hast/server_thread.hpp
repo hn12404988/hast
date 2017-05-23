@@ -20,7 +20,6 @@ namespace hast{
 
 		char *status {nullptr};
 		std::thread **thread_list {nullptr};
-		std::string *raw_msg_bk {nullptr};
 		bool *check_entry {nullptr};
 
 		int msg_freeze_fd {-1};
@@ -37,7 +36,6 @@ namespace hast{
 		std::function<void(const short int)> execute {nullptr};
 		int *socketfd {nullptr};
 		std::string *raw_msg {nullptr};
-		bool anti_data_racing {false};
 		bool section_check {false};
 		bool msg_freeze {false};
 	};
