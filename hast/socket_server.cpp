@@ -486,6 +486,9 @@ namespace hast{
 			raw_msg[a].clear();
 			socketfd[a] = -1;
 		}
+		if(on_close!=nullptr){
+			on_close(c);
+		}
 	}
 
 	void socket_server::close_socket(const short int thread_index){

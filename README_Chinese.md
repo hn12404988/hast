@@ -1,4 +1,4 @@
-# hast(1.0.0)
+# hast
 
 在Linux平台上的socket溝通套件，並針對[網路拓樸](https://zh.wikipedia.org/wiki/%E7%BD%91%E7%BB%9C%E6%8B%93%E6%89%91)特別設計，支援TCP/IP和unix domain socket，特色是平行處理和容易使用
 

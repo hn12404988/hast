@@ -1,4 +1,4 @@
-# hast(1.0.0)
+# hast
 
 Server and client libraries for socket communication with topology features in linux, supporting TCP/IP and Unix Domain socket. Features are handling requests in parallel and tiny enough to be embeded in program. 
 
