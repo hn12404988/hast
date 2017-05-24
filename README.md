@@ -25,7 +25,7 @@ Server and client libraries for socket communication with topology features in l
 ## Getting Started
 
 * Only for Linux (kernel > 2.5.44 because using `epoll.h`). 
-* You will need an C++ compiler which can support C++11.
+* `gcc` > 4.9, due to this [bug](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=54562)
 * Header-only library, so copy `hast` folder to your include folder.
 * This project use `std::thread`, so compile file with `std::thread` library (Can be `-pthread`).
 

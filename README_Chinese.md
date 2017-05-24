@@ -23,7 +23,7 @@
 ## 開始使用
 
 * 只適用於Linux平台，kernel > 2.5.44（因為使用到epoll.h）
-* 需要一個可支援C++11的編譯器
+* `gcc` > 4.9, 因為這個[bug](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=54562)
 * 沒有其他依附套件，只需把`hast`資料夾複製到系統的`include`資料夾裡即可
 * 使用標準函式庫中的`std::thread`, 所以編譯時需要使用到該套件（可能是`-pthread`）
 
