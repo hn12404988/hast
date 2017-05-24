@@ -25,7 +25,6 @@ namespace hast{
 		int pending_amount {0};
 		std::mutex wait_mx;
 		std::timed_mutex check_mx,freeze_mx;
-		std::map<std::string,std::mutex> anti;
 
 		std::string check_str {"<>"};
 		std::string freeze_str {"!"};
