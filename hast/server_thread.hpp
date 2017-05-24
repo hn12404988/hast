@@ -16,7 +16,6 @@ namespace hast{
 		server_thread();
 		~server_thread();
 		short int max_thread {0}, recv_thread {-1};
-		std::mutex thread_mx;
 
 		char *status {nullptr};
 		std::thread **thread_list {nullptr};

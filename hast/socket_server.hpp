@@ -23,7 +23,7 @@ namespace hast{
 		std::list<int> pending_fd;
 		std::list<std::string> pending_msg;
 		int pending_amount {0};
-		std::mutex wait_mx;
+		std::mutex wait_mx,thread_mx;
 		std::timed_mutex check_mx,freeze_mx;
 
 		std::string check_str {"<>"};

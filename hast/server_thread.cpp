@@ -71,33 +71,26 @@ namespace hast{
 	}
 
 	short int server_thread::get_thread(){
-		thread_mx.lock();
 		if(msg_freeze_id>=0){
 			if(status[msg_freeze_id]==hast::WAIT){
 				status[msg_freeze_id] = hast::GET;
-				thread_mx.unlock();
 				return msg_freeze_id;
 			}
 		}
 		if(section_check_id>=0){
 			if(status[section_check_id]==hast::WAIT){
 				status[section_check_id] = hast::GET;
-				thread_mx.unlock();
 				return section_check_id;
 			}
 		}
 		short int a {0};
-		for(;a<max_thread;++a){
-			if(recv_thread==a){
-				continue;
+		if(recv_thread==-1){
+			for(;a<max_thread;++a){
+				if(status[a]==hast::WAIT){
+					break;
+				}
 			}
-			if(status[a]==hast::WAIT){
-				break;
-			}
-		}
-		if(a==max_thread){
-			if(status[recv_thread]==hast::WAIT){
-				a = recv_thread;
+			if(a<max_thread){
 				status[a] = hast::GET;
 			}
 			else{
@@ -105,25 +98,40 @@ namespace hast{
 			}
 		}
 		else{
-			status[a] = hast::GET;
+			for(;a<max_thread;++a){
+				if(recv_thread==a){
+					continue;
+				}
+				if(status[a]==hast::WAIT){
+					break;
+				}
+			}
+			if(a==max_thread){
+				if(status[recv_thread]==hast::WAIT){
+					a = recv_thread;
+					status[a] = hast::GET;
+				}
+				else{
+					a = -1;
+				}
+			}
+			else{
+				status[a] = hast::GET;
+			}
 		}
-		thread_mx.unlock();
 		return a;
 	}
 
 	short int server_thread::get_thread_no_recv(){
-		thread_mx.lock();
 		if(msg_freeze_id>=0){
 			if(status[msg_freeze_id]==hast::WAIT){
 				status[msg_freeze_id] = hast::GET;
-				thread_mx.unlock();
 				return msg_freeze_id;
 			}
 		}
 		if(section_check_id>=0){
 			if(status[section_check_id]==hast::WAIT){
 				status[section_check_id] = hast::GET;
-				thread_mx.unlock();
 				return section_check_id;
 			}
 		}
@@ -142,19 +150,16 @@ namespace hast{
 		else{
 			a = -1;
 		}
-		thread_mx.unlock();
 		return a;
 	}
 	
 	inline void server_thread::add_thread(){
 		short int a {0};
-		thread_mx.lock();
 		for(;a<max_thread;++a){
 			if(thread_list[a]==nullptr){
 				thread_list[a] = new std::thread(execute,a);
 				break;
 			}
 		}
-		thread_mx.unlock();
 	}
 };
