@@ -157,8 +157,6 @@ inline bool client_core::build_on_i(short int &location_index){
 		}
 	}
 	ev.data.fd = socketfd[i];
-	std::cout << socketfd[i] << std::endl;
-	std::cout << &ev << std::endl;
 	if(epoll_ctl(epollfd, EPOLL_CTL_ADD, socketfd[i],&ev)==-1){
 		close_runner(i);
 		return false;
