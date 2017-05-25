@@ -13,6 +13,10 @@ namespace hast{
 	void socket_server::set_topology_wait(short int unsigned time){
 		topology_wait = time;
 	}
+
+	void socket_server::set_shutdown_code(std::string code){
+		shutdown_code = code;
+	}
 	
 	void socket_server::done(const short int thread_index){
 		/**
@@ -85,6 +89,10 @@ namespace hast{
 				else{
 					a = epoll_wait(epollfd, events, MAX_EVENTS, 1);
 				}
+				if(byebye==true){
+					wait_mx.unlock();
+					break;
+				}
 				if(pending_amount>0){
 					if(msg_freeze_fd==-1 && section_check_fd==-1){
 						wait_mx.unlock();
@@ -107,6 +115,9 @@ namespace hast{
 					wait_mx.unlock();
 					break;
 				}
+			}
+			if(byebye==true){
+				break;
 			}
 			if(status[recv_thread]!=hast::WAIT){
 				break;
@@ -166,7 +177,7 @@ namespace hast{
 				socketfd[thread_index] = -1;
 			}
 			status[thread_index] = hast::WAIT;
-			if(recv_thread==-1){
+			if(byebye==false && recv_thread==-1){
 				recv_thread = thread_index;
 				thread_mx.unlock();
 				recv_epoll();
@@ -178,7 +189,7 @@ namespace hast{
 				if(status[thread_index]==hast::READ || status[thread_index]==hast::READ_PREFIX){
 					break;
 				}
-				else if(status[thread_index]==hast::RECYCLE){
+				else if(status[thread_index]==hast::RECYCLE || byebye==true){
 					return false;
 				}
 				else if(recv_thread==-1){
@@ -219,6 +230,14 @@ namespace hast{
 					//client close connection.
 					close_socket(socketfd[thread_index]);
 					continue;
+				}
+				if(call_shutdown==true){
+					if(raw_msg[thread_index]==shutdown_code){
+						byebye = true;
+						send(socketfd[thread_index], "1", 1,0);
+						close_socket(socketfd[thread_index]);
+						continue;
+					}
 				}
 			}
 			else{
@@ -487,7 +506,7 @@ namespace hast{
 			socketfd[a] = -1;
 		}
 		if(on_close!=nullptr){
-			on_close(c);
+			on_close(socket_index);
 		}
 	}
 
@@ -504,6 +523,9 @@ namespace hast{
 		while(new_socket>=0){
 			new_socket = accept4(host_socket, (struct sockaddr *)&client_addr, &client_addr_size,SOCK_NONBLOCK);
 			if(new_socket>0){
+				if(byebye==true){
+					break;
+				}
 				ev.data.fd = new_socket;
 				if(epoll_ctl(epollfd, EPOLL_CTL_ADD, new_socket,&ev)==-1){
 					continue;

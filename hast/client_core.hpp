@@ -68,6 +68,7 @@ public:
 	short int fireNcheck(short int &location_index,std::string &msg);
 	short int unfreeze(short int &location_index);
 	short int uncheck(short int &location_index);
+	short int shutdown_server(short int &location_index,std::string &shutdown_code);
 	void import_location(std::vector<std::string> *location, short int amount = 0);
 	void set_wait_maximum(short int wait);
 	void set_error_node(short int socket_index,const char* file_name);

@@ -184,6 +184,58 @@ inline void client_core::build_runner(short int &location_index){
 	}
 }
 
+short int client_core::shutdown_server(short int &location_index,std::string &shutdown_code){
+	short int a;
+	a = fire(location_index,shutdown_code);
+	if(a==0){
+		close_runner(i);
+		shutdown_code = "shutdown";
+		for(i=0;i<amount;++i){
+			if(location_list[i]==location_index){
+				up();
+				break;
+			}
+		}
+		if(i==amount){
+			build_runner(location_index);
+		}
+		if(i==-1){
+			shutdown_code = error_send(1,location_index,shutdown_code);
+			error_fire(shutdown_code);
+			shutdown_code.clear();
+			return 1;
+		}
+		if( send(socketfd[i] , shutdown_code.c_str() , shutdown_code.length() , 0) < 0){
+			close_runner(i);
+			for(i=0;i<amount;++i){
+				if(location_list[i]==location_index){
+					break;
+				}
+			}
+			if(i==amount){
+				build_runner(location_index);
+			}
+			if(i==-1){
+				shutdown_code = error_send(1,location_index,shutdown_code);
+				error_fire(shutdown_code);
+				shutdown_code.clear();
+				return 1;
+			}
+			if( send(socketfd[i] , shutdown_code.c_str() , shutdown_code.length() , 0) < 0){
+				close_runner(i);
+				shutdown_code = error_send(2,location_index,shutdown_code);
+				error_fire(shutdown_code);
+				shutdown_code.clear();
+				return 2;
+			}
+		}
+		return 0;
+	}
+	else{
+		return a;
+	}
+}
+
 short int client_core::fire(short int &location_index,std::string &msg){
 	if(msg==""){
 		str = error_send(7,location_index,"Empty");
@@ -205,30 +257,28 @@ short int client_core::fire(short int &location_index,std::string &msg){
 		msg.clear();
 		return 1;
 	}
-	else{
+	if( send(socketfd[i] , msg.c_str() , msg.length() , 0) < 0){
+		close_runner(i);
+		for(i=0;i<amount;++i){
+			if(location_list[i]==location_index){
+				break;
+			}
+		}
+		if(i==amount){
+			build_runner(location_index);
+		}
+		if(i==-1){
+			msg = error_send(1,location_index,msg);
+			error_fire(msg);
+			msg.clear();
+			return 1;
+		}
 		if( send(socketfd[i] , msg.c_str() , msg.length() , 0) < 0){
 			close_runner(i);
-			for(i=0;i<amount;++i){
-				if(location_list[i]==location_index){
-					break;
-				}
-			}
-			if(i==amount){
-				build_runner(location_index);
-			}
-			if(i==-1){
-				msg = error_send(1,location_index,msg);
-				error_fire(msg);
-				msg.clear();
-				return 1;
-			}
-			if( send(socketfd[i] , msg.c_str() , msg.length() , 0) < 0){
-				close_runner(i);
-				msg = error_send(2,location_index,msg);
-				error_fire(msg);
-				msg.clear();
-				return 2;
-			}
+			msg = error_send(2,location_index,msg);
+			error_fire(msg);
+			msg.clear();
+			return 2;
 		}
 	}
 	j = receive(msg);
