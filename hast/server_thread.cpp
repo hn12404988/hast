@@ -1,7 +1,7 @@
 namespace hast{
 	server_thread::server_thread(){}
 	server_thread::~server_thread(){
-		if(status!=nullptr){
+		if(thread_list!=nullptr){
 			short int a;
 			for(;;){
 				for(a=0;a<max_thread;++a){
@@ -25,26 +25,24 @@ namespace hast{
 					break;
 				}
 			}
-			if(status!=nullptr){
-				delete [] status;
-				status = nullptr;
-			}
-			if(thread_list!=nullptr){
-				delete [] thread_list;
-				thread_list = nullptr;
-			}
-			if(raw_msg!=nullptr){
-				delete [] raw_msg;
-				raw_msg = nullptr;
-			}
-			if(socketfd!=nullptr){
-				delete [] socketfd;
-				socketfd = nullptr;
-			}
-			if(check_entry!=nullptr){
-				delete [] check_entry;
-				check_entry = nullptr;
-			}
+			delete [] thread_list;
+			thread_list = nullptr;
+		}
+		if(status!=nullptr){
+			delete [] status;
+			status = nullptr;
+		}
+		if(raw_msg!=nullptr){
+			delete [] raw_msg;
+			raw_msg = nullptr;
+		}
+		if(socketfd!=nullptr){
+			delete [] socketfd;
+			socketfd = nullptr;
+		}
+		if(check_entry!=nullptr){
+			delete [] check_entry;
+			check_entry = nullptr;
 		}
 	}
 	void server_thread::init(){

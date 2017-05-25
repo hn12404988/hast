@@ -300,8 +300,11 @@ short int client_core::fire(short int &location_index,std::string &msg){
 		}
 		else{
 			if(str[0]=='0'){
+				std::string tmp;
+				tmp = str;
 				str = reply_error_send(location_index, msg,str);
 				error_fire(str);
+				msg = tmp; //Do this in dev mode.
 				//msg = "0"; Don't show error msg to client. Do this while on production.
 			}
 			else{
