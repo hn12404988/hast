@@ -4,35 +4,27 @@ client_core::client_core(){
 }
 
 client_core::~client_core(){
-	for(i=0;i<amount;++i){
-		close_socket(i);
+	if(socketfd!=nullptr){
+		delete [] socketfd;
+		socketfd = nullptr;
+	}
+	if(location_list!=nullptr){
+		delete [] location_list;
+		location_list = nullptr;
 	}
 }
 
-inline void client_core::close_runner(short int index){
-	if(socketfd[index]!=-1){
-		epoll_ctl(epollfd, EPOLL_CTL_DEL, socketfd[index],nullptr);
-		shutdown(socketfd[index],SHUT_RDWR);
-		close(socketfd[index]);
-		socketfd[index] = -1;
+inline void client_core::close_runner(short int runner_index){
+	if(socketfd[runner_index]!=-1){
+		epoll_ctl(epollfd, EPOLL_CTL_DEL, socketfd[runner_index],nullptr);
+		shutdown(socketfd[runner_index],SHUT_RDWR);
+		close(socketfd[runner_index]);
+		socketfd[runner_index] = -1;
 	}
-	location_list[index] = -1;
+	location_list[runner_index] = -1;
 }
 
-inline void client_core::close_socket(int socket){
-	short int a;
-	a = amount-1;
-	for(;a>=0;--a){
-		if(socketfd[a]==socket){
-			break;
-		}
-	}
-	if(a>=0){
-		close_runner(a);
-	}
-}
-
-std::string client_core::error_send(short int flag, short int location_index, std::string msg){
+std::string client_core::error_msg(short int flag, short int location_index, std::string msg){
 	if(error_socket_index==-1){
 		std::cout << "Client didn't set error node, so here are the error messages." << std::endl;
 		std::cout << "Flag: " << flag << std::endl;
@@ -59,7 +51,7 @@ std::string client_core::error_send(short int flag, short int location_index, st
 	}
 }
 
-std::string client_core::reply_error_send(short int location_index, std::string msg, std::string reply){
+std::string client_core::reply_error_msg(short int location_index, std::string msg, std::string reply){
 	if(error_socket_index==-1){
 		std::cout << "Client didn't set error node, so here are the reply error messages." << std::endl;
 		std::cout << "To: " << (*location)[location_index] << std::endl;
@@ -86,7 +78,8 @@ std::string client_core::reply_error_send(short int location_index, std::string 
 	}
 }
 
-void client_core::import_location(std::vector<std::string> *location, short int amount){
+void client_core::import_location(std::vector<std::string> *location, short int unsigned amount){
+	short int a;
 	if(location!=nullptr){
 		reset_addr(hast::tcp_socket::CLIENT);
 		addr.sun_family = AF_UNIX;
@@ -97,15 +90,19 @@ void client_core::import_location(std::vector<std::string> *location, short int 
 		else{
 			this->amount = amount;
 		}
-		for(i=0;i<this->amount;++i){
-			socketfd.push_back(-1);
-			location_list.push_back(-1);
+		if(socketfd==nullptr && location_list==nullptr){
+			socketfd = new int [amount];
+			location_list = new short int [amount];
+		}
+		for(a=0;a<this->amount;++a){
+			socketfd[a] = -1;
+			location_list[a] = -1;
 		}
 	}
 }
 
-inline bool client_core::build_on_i(short int &location_index){
-	j = 1;
+inline bool client_core::build_on_i(short int i, short int location_index){
+	int j {1};
 	if((*location)[location_index].find(":")!=std::string::npos){
 		//tcp
 		std::string ip,port;
@@ -164,208 +161,160 @@ inline bool client_core::build_on_i(short int &location_index){
 	return true;
 }
 
-inline void client_core::build_runner(short int &location_index){
-	i = amount-1;
-	for(;i>=0;--i){
-		if(socketfd[i]==-1){
-			if(build_on_i(location_index)==true){
-				location_list[i] = location_index;
-			}
-			else{
-				i = -1;
-			}
-			return;
-		}
-	}
-	if(i==-1){
-		i = amount - 1;
-		close_runner(i);
-		build_runner(location_index);
-	}
-}
-
 short int client_core::shutdown_server(short int &location_index,std::string &shutdown_code){
-	short int a;
-	a = fire(location_index,shutdown_code);
+	short int a,runner_bk;
+	a = fire_return(location_index,shutdown_code,runner_bk);
 	if(a==0){
-		close_runner(i);
+		close_runner(runner_bk);
 		shutdown_code = "shutdown";
-		for(i=0;i<amount;++i){
-			if(location_list[i]==location_index){
-				up();
-				break;
-			}
-		}
-		if(i==amount){
-			build_runner(location_index);
-		}
-		if(i==-1){
-			shutdown_code = error_send(1,location_index,shutdown_code);
-			error_fire(shutdown_code);
-			shutdown_code.clear();
-			return 1;
-		}
-		if( send(socketfd[i] , shutdown_code.c_str() , shutdown_code.length() , 0) < 0){
-			close_runner(i);
-			for(i=0;i<amount;++i){
-				if(location_list[i]==location_index){
-					break;
-				}
-			}
-			if(i==amount){
-				build_runner(location_index);
-			}
-			if(i==-1){
-				shutdown_code = error_send(1,location_index,shutdown_code);
-				error_fire(shutdown_code);
-				shutdown_code.clear();
-				return 1;
-			}
-			if( send(socketfd[i] , shutdown_code.c_str() , shutdown_code.length() , 0) < 0){
-				close_runner(i);
-				shutdown_code = error_send(2,location_index,shutdown_code);
-				error_fire(shutdown_code);
-				shutdown_code.clear();
-				return 2;
-			}
-		}
-		return 0;
+		return fire(location_index,shutdown_code);
 	}
 	else{
 		return a;
 	}
 }
 
-short int client_core::fire(short int &location_index,std::string &msg){
+short int client_core::fire_return(short int &location_index,std::string &msg, short int &runner_bk){
+	short int runner_index,a;
+	std::string reply;
 	if(msg==""){
-		str = error_send(7,location_index,"Empty");
-		error_fire(str);
+		error_fire(error_msg(7,location_index,"Empty"));
 		return 7;
 	}
-	for(i=0;i<amount;++i){
-		if(location_list[i]==location_index){
-			up();
-			break;
-		}
+	runner_index = get_runner(location_index);
+	if(runner_index==-1){
+		runner_index = build_runner(location_index);
 	}
-	if(i==amount){
-		build_runner(location_index);
-	}
-	if(i==-1){
-		msg = error_send(1,location_index,msg);
+	if(runner_index==-1){
+		msg = error_msg(1,location_index,msg);
 		error_fire(msg);
 		msg.clear();
+		runner_bk = -1;
 		return 1;
 	}
-	if( send(socketfd[i] , msg.c_str() , msg.length() , 0) < 0){
-		close_runner(i);
-		for(i=0;i<amount;++i){
-			if(location_list[i]==location_index){
-				break;
-			}
-		}
-		if(i==amount){
-			build_runner(location_index);
-		}
-		if(i==-1){
-			msg = error_send(1,location_index,msg);
-			error_fire(msg);
-			msg.clear();
-			return 1;
-		}
-		if( send(socketfd[i] , msg.c_str() , msg.length() , 0) < 0){
-			close_runner(i);
-			msg = error_send(2,location_index,msg);
-			error_fire(msg);
-			msg.clear();
-			return 2;
-		}
+	a = write(runner_index,location_index,msg);
+	runner_bk = runner_index;
+	if(a>0){
+		runner_bk = -1;
+		return a;
 	}
-	j = receive(msg);
-	if(j>0){
-		short int tmp_j {j};
-		str = error_send(j,location_index,msg);
-		close_runner(i);
-		error_fire(str);
+	a = receive(runner_index, reply);
+	if(a>0){
+		reply = error_msg(a,location_index,msg);
+		close_runner(runner_index);
+		runner_bk = -1;
+		error_fire(reply);
 		msg.clear();
-		return tmp_j;
+		return a;
 	}
 	else{
-		if(str==""){
-			str = error_send(4,location_index,msg);
-			close_runner(i);
-			error_fire(str);
+		if(reply==""){
+			reply = error_msg(4,location_index,msg);
+			close_runner(runner_index);
+			runner_bk = -1;
+			error_fire(reply);
 			msg.clear();
 			return 4;
 		}
 		else{
-			if(str[0]=='0'){
-				std::string tmp;
-				tmp = str;
-				str = reply_error_send(location_index, msg,str);
-				error_fire(str);
-				msg = tmp; //Do this in dev mode.
+			if(reply[0]=='0'){
+				msg = reply_error_msg(location_index, msg,reply);
+				error_fire(msg);
+				msg = reply; //Do this in dev mode.
 				//msg = "0"; Don't show error msg to client. Do this while on production.
 			}
 			else{
-				msg = str;
+				msg = reply;
 			}
 			return 0;
 		}
 	}
 }
 
-inline short int client_core::receive(std::string &msg){
-	str.clear();
+short int client_core::fire(short int &location_index,std::string &msg){
+	short int runner_index,a;
+	std::string reply;
+	if(msg==""){
+		error_fire(error_msg(7,location_index,"Empty"));
+		return 7;
+	}
+	runner_index = get_runner(location_index);
+	if(runner_index==-1){
+		runner_index = build_runner(location_index);
+	}
+	if(runner_index==-1){
+		msg = error_msg(1,location_index,msg);
+		error_fire(msg);
+		msg.clear();
+		return 1;
+	}
+	a = write(runner_index,location_index,msg);
+	if(a>0){
+		return a;
+	}
+	a = receive(runner_index, reply);
+	if(a>0){
+		reply = error_msg(a,location_index,msg);
+		close_runner(runner_index);
+		error_fire(reply);
+		msg.clear();
+		return a;
+	}
+	else{
+		if(reply==""){
+			reply = error_msg(4,location_index,msg);
+			close_runner(runner_index);
+			error_fire(reply);
+			msg.clear();
+			return 4;
+		}
+		else{
+			if(reply[0]=='0'){
+				msg = reply_error_msg(location_index, msg,reply);
+				error_fire(msg);
+				msg = reply; //Do this in dev mode.
+				//msg = "0"; Don't show error msg to client. Do this while on production.
+			}
+			else{
+				msg = reply;
+			}
+			return 0;
+		}
+	}
+}
+
+inline short int client_core::receive(short int runner_index,std::string &reply){
+	int len;
 	for(;;){
-		j = epoll_wait(epollfd, events, MAX_EVENTS, 1000*wait_maximum);
-		if(j>0){
-			--j;
-			for(;j>=0;--j){
-				if(events[j].data.fd==socketfd[i]){
-					if(events[j].events!=1){
+		len = epoll_wait(epollfd, events, MAX_EVENTS, wait_maximum);
+		if(len>0){
+			--len;
+			for(;len>=0;--len){
+				if(events[len].data.fd==socketfd[runner_index]){
+					if(events[len].events!=1){
 						return 10;
 					}
 					break;
 				}
 			}
-			if(j==-1){
+			if(len==-1){
 				continue;
 			}
 			else{
-				for(;;){
-					j = recv(socketfd[i], reply, transport_size, MSG_DONTWAIT);
-					if(j>0){
-						str.append(reply,j);
-						j = 0;
-					}
-					else if(j==-1){
-						j = 0;
-						break;
-					}
-					else if(j==0){
-						str.clear();
-						j = 3;
-						break;
-					}
+				if(read(runner_index,reply)==true){
+					return 0;
+				}
+				else{
+					return 3;
 				}
 			}
-			break;
 		}
-		else if(j==0){
-			j = 4;
-			break;
+		else if(len==0){
+			return 4;
 		}
-		else if(j==-1){
-			j = 6;
-			break;
+		else if(len==-1){
+			return 6;
 		}
-	}
-	if(j>0){
-		return j;
-	}
-	else{
-		return 0;
 	}
 }
 
@@ -378,16 +327,21 @@ inline void client_core::error_fire(std::string msg){
 }
 
 short int client_core::fireNclose(short int &location_index,std::string &msg){
-	j = fire(location_index,msg);
-	close_runner(i);
-	i = j;
-	return i;
+	short int a,runner_bk;
+	a = fire_return(location_index,msg,runner_bk);
+	if(a==0){
+		close_runner(runner_bk);
+		return 0;
+	}
+	else{
+		return a;
+	}
 }
 
 short int client_core::fireNfreeze(short int &location_index,std::string &msg){
 	if(msg==""){
-		str = error_send(7,location_index,"Empty");
-		error_fire(str);
+		msg = error_msg(7,location_index,"Empty");
+		error_fire(msg);
 		msg.clear();
 		return 7;
 	}
@@ -397,14 +351,13 @@ short int client_core::fireNfreeze(short int &location_index,std::string &msg){
 
 short int client_core::unfreeze(short int &location_index){
 	std::string tmp_msg {"!"};
-	//str = "!";
 	return fire(location_index,tmp_msg);
 }
 
 short int client_core::fireNcheck(short int &location_index,std::string &msg){
 	if(msg==""){
-		str = error_send(7,location_index,"Empty");
-		error_fire(str);
+		msg = error_msg(7,location_index,"Empty");
+		error_fire(msg);
 		msg.clear();
 		return 7;
 	}
@@ -414,25 +367,26 @@ short int client_core::fireNcheck(short int &location_index,std::string &msg){
 
 short int client_core::uncheck(short int &location_index){
 	std::string tmp_msg {"<>"};
-	//str = "<>";
 	return fire(location_index,tmp_msg);
 }
 
-inline void client_core::up(){
-	if(i==0){
-		return;
+inline short int client_core::up(short int runner_index){
+	if(runner_index==0){
+		return 0;
 	}
-	j = socketfd[i];
-	socketfd[i] = socketfd[i-1];
-	socketfd[i-1] = j;
-	j = location_list[i];
-	location_list[i] = location_list[i-1];
-	location_list[i-1] = j;
-	--i;
+	int a;
+	a = socketfd[runner_index];
+	socketfd[runner_index] = socketfd[runner_index-1];
+	socketfd[runner_index-1] = a;
+	a = location_list[runner_index];
+	location_list[runner_index] = location_list[runner_index-1];
+	location_list[runner_index-1] = a;
+	--runner_index;
+	return runner_index;
 }
 
 void client_core::set_wait_maximum(short int wait){
-	wait_maximum = wait;
+	wait_maximum = wait*1000;
 }
 
 void client_core::set_error_node(short int socket_index,const char* file_name){

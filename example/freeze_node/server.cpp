@@ -18,7 +18,7 @@ auto execute = [&](const short int index){
 int main(){
 	server.execute = execute;
 	server.msg_freeze = true;
-	if(server.init(__FILE__,1)==false){
+	if(server.init(__FILE__)==false){
 		std::cout << "Server can't init at file: " << __FILE__ << std::endl;
 	}
 	else{

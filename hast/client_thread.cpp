@@ -3,7 +3,8 @@ client_thread::~client_thread(){
 	recycle_thread();
 }
 
-void client_thread::multi_con(short int &location_index, short int unsigned amount){
+bool client_thread::multi_con(short int &location_index, short int unsigned amount){
+	short int i,j;
 	if(amount>client_core::amount){
 		amount = client_core::amount;
 	}
@@ -15,15 +16,19 @@ void client_thread::multi_con(short int &location_index, short int unsigned amou
 		}
 	}
 	i = client_core::amount-1;
-	while(j<amount){
-		for(;i>=0;--i){
-			if(j==amount){
-				break;
-			}
-			client_thread::build_runner(location_index);
-			++j;
+	for(;i>=0;--i){
+		if(j==amount){
+			break;
 		}
+		if(client_thread::build_runner(location_index)==-1){
+			return false;
+		}
+		++j;
 	}
+	if(j!=amount){
+		return false;
+	}
+	return true;
 }
 
 inline void client_thread::clear_waiting(){
@@ -33,8 +38,7 @@ inline void client_thread::clear_waiting(){
 		--a;
 		for(;a>=0;--a){
 			if(waiting[a]>=0){
-				str = error_send(5,location_list[waiting[a]],"clear_waiting");
-				client_thread::error_fire(str);
+				error_fire(error_msg(5,location_list[waiting[a]],"clear_waiting"));
 				close_runner(waiting[a]);
 				waiting[a] = -1;
 				if(store_reply[a]!=nullptr){
@@ -46,40 +50,50 @@ inline void client_thread::clear_waiting(){
 	}
 }
 
-inline void client_thread::build_runner(short int &location_index){
+inline short int client_thread::build_runner(short int location_index){
+	short int i;
+	int j;
 	i = amount-1;
 	for(;i>=0;--i){
 		if(socketfd[i]==-1){
-			if(build_on_i(location_index)==true){
+			if(build_on_i(i,location_index)==true){
 				location_list[i] = location_index;
+				return i;
 			}
 			else{
-				i = -1;
+				return -1;
 			}
-			return;
 		}
 	}
 	i = amount - 1;
-	for(;i>=0;--i){
-		j = waiting.size()-1;
-		for(;j>=0;--j){
-			if(waiting[j]==i){
+	if(on_air==true){
+		for(;i>=0;--i){
+			j = waiting.size();
+			if(j>0){
+				--j;
+				for(;j>=0;--j){
+					if(waiting[j]==i){
+						break;
+					}
+				}
+				if(j==-1){
+					close_runner(i);
+					return client_thread::build_runner(location_index);
+				}
+			}
+			else{
 				break;
 			}
 		}
-		if(j==-1){
-			break;
-		}
-	}
-	if(i>=0){
-		close_runner(i);
-		client_thread::build_runner(location_index);
+		std::cout << "build_runner: " << __LINE__ << std::endl;
+		while(on_air==true){}
+		std::cout << "build_runner: " << __LINE__ << std::endl;
+		clear_waiting();
+		return client_thread::build_runner(location_index);
 	}
 	else{
-		++amount;
-		socketfd.push_back(-1);
-		location_list.push_back(-1);
-		client_thread::build_runner(location_index);
+		close_runner(i);
+		return client_thread::build_runner(location_index);
 	}
 }
 
@@ -92,9 +106,7 @@ inline bool client_thread::recycle_thread(){
 			return true;
 		}
 		else{
-			str = "Thread jam";
-			str = error_send(9,-1,str);
-			client_thread::error_fire(str);
+			error_fire(error_msg(9,-1,"Thread joinable is false"));
 			return false;
 		}
 	}
@@ -102,79 +114,74 @@ inline bool client_thread::recycle_thread(){
 }
 
 short int client_thread::fire_thread(short int &location_index, std::string &msg, std::string *reply){
-	short int i_index,w_index;
+	short int runner_index,wait_bk;
+	int j;
 	if(on_air==false){
+		std::cout << __LINE__ << std::endl;
 		clear_waiting();
 		if(recycle_thread()==false){
 			msg.clear();
 			return 9;
 		}
 	}
-	search_runner(location_index);
-	if(i==-1){
-		client_thread::build_runner(location_index);
+	runner_index = get_runner(location_index);
+	std::cout << __LINE__ << " : " << runner_index << std::endl;
+	if(runner_index==-1){
+		std::cout << __LINE__ << " : " << runner_index << std::endl;
+		runner_index = client_thread::build_runner(location_index);
+		std::cout << __LINE__ << " : " << runner_index << std::endl;
 	}
-	if(i==-1){
-		str = "fire_thread";
-		str = error_send(1,location_index,str);
-		client_thread::error_fire(str);
+	if(runner_index==-1){
+		std::cout << __LINE__ << " : " << runner_index << std::endl;
+		error_fire(error_msg(1,location_index,"fire_thread"));
 		msg.clear();
 		return 1;
 	}
-	i_index = i;
+	std::cout << __LINE__ << " : " << runner_index << std::endl;
 	j = waiting.size()-1;
 	for(;j>=0;--j){
 		if(waiting[j]==-1){
 			break;
 		}
 	}
+	std::cout << __LINE__ << " : " << runner_index << std::endl;
 	if(j==-1){
 		waiting.push_back(-1);
 		store_reply.push_back(nullptr);
-		j = waiting.size()-1;
+		wait_bk = waiting.size()-1;
 	}
-	w_index = j;
-	if( send(socketfd[i] , msg.c_str() , msg.length() , 0) < 0){
-		close_runner(i);
-		search_runner(location_index);
-		if(i==-1){
-			client_thread::build_runner(location_index);
-		}
-		if(i==-1){
-			str = "fail on sending in fire_thread";
-			str = error_send(1,location_index,str);
-			client_thread::error_fire(str);
-			msg.clear();
-			return 1;
-		}
-		i_index = i;
-		if( send(socketfd[i] , msg.c_str() , msg.length() , 0) < 0){
-			close_runner(i);
-			str = error_send(2,location_index,msg);
-			client_thread::error_fire(str);
-			msg.clear();
-			return 2;
-		}
+	else{
+		wait_bk = j;
+	}
+	std::cout << __LINE__ << " : " << runner_index << std::endl;
+	j = write(runner_index,location_index,msg);
+	std::cout << __LINE__ << " : " << runner_index << std::endl;
+	if(j>0){
+		return j;
 	}
 	mx.lock();
 	if(on_air==false){
 		mx.unlock();
 		if(recycle_thread()==false){
-			close_runner(i_index);
+			close_runner(runner_index);
 			clear_waiting();
 			msg.clear();
 			return 9;
 		}
-		waiting[w_index] = i_index;
-		store_reply[w_index] = reply;
+		waiting[wait_bk] = runner_index;
+		store_reply[wait_bk] = reply;
 		on_air = true;
-		epoll_0_thread = false;
-		thread = new std::thread([&]{this->recv_epoll();});
+		epoll_0 = false;
+		std::cout << __LINE__ << " : " << runner_index << std::endl;
+		thread = new std::thread([&]{this->recv_epoll_thread();});
+		std::cout << __LINE__ << " : " << runner_index << std::endl;
 	}
 	else{
-		waiting[w_index] = i_index;
-		store_reply[w_index] = reply;
+		std::cout << __LINE__ << " : " << runner_index << std::endl;
+		waiting[wait_bk] = runner_index;
+		store_reply[wait_bk] = reply;
 		mx.unlock();
+		std::cout << __LINE__ << " : " << runner_index << std::endl;
 	}
 	return 0;
 }
@@ -187,158 +194,44 @@ short int client_thread::fireNforget(short int &location_index,std::string &msg)
 	return fire_thread(location_index,msg,nullptr);
 }
 
-short int client_thread::fire(short int &location_index,std::string &msg){
-	mx.lock();
-	if(msg==""){
-		str = error_send(7,location_index,"Empty");
-		mx.unlock();
-		client_thread::error_fire(str);
-		return 7;
-	}
-	search_runner(location_index);
-	if(i==-1){
-		client_thread::build_runner(location_index);
-	}
-	if(i==-1){
-		str = "client_thread::fire";
-		msg = error_send(1,location_index,str);
-		mx.unlock();
-		client_thread::error_fire(msg);
-		msg.clear();
-		return 1;
-	}
-	else{
-		if( send(socketfd[i] , msg.c_str() , msg.length() , 0) < 0){
-			close_runner(i);
-			search_runner(location_index);
-			if(i==-1){
-				client_thread::build_runner(location_index);
-			}
-			if(i==-1){
-				str = "fail on sending in client_thread::fire";
-				msg = error_send(1,location_index,str);
-				mx.unlock();
-				client_thread::error_fire(msg);
-				msg.clear();
-				return 1;
-			}
-			if( send(socketfd[i] , msg.c_str() , msg.length() , 0) < 0){
-				close_runner(i);
-				msg = error_send(2,location_index,msg);
-				mx.unlock();
-				client_thread::error_fire(msg);
-				msg.clear();
-				return 2;
-			}
-		}
-	}
-	short int tmp_j;
-	tmp_j = receive(msg);
-	if(tmp_j>0){
-		str = error_send(j,location_index,msg);
-		close_runner(i);
-		client_thread::error_fire(str);
-		msg.clear();
-	}
-	else{
-		if(str==""){
-			str = error_send(4,location_index,msg);
-			close_runner(i);
-			client_thread::error_fire(str);
-			msg.clear();
-			tmp_j = 4;
-		}
-		else{
-			if(str[0]=='0'){
-				std::string tmp;
-				tmp = str;
-				str = reply_error_send(location_index, msg,str);
-				client_thread::error_fire(str);
-				msg = tmp; //Do this in dev mode.
-				//msg = "0"; Don't show error msg to client. Do this while on production.
-			}
-			else{
-				msg = str;
-			}
-			tmp_j = 0;
-		}
-	}
-	mx.unlock();
-	return tmp_j;
-}
-
-inline void client_thread::error_fire(std::string msg){
-	if(msg!=""){
-		if(error_socket_index!=-1){
-			client_thread::fire(error_socket_index,msg);
-		}
-	}
-}
-
-short int client_thread::fireNclose(short int &location_index,std::string &msg){
-	j = client_thread::fire(location_index,msg);
-	if(j==0){
-		close_runner(i);
-		return 0;
-	}
-	else{
-		i = j;
-		return i;
-	}
-}
-
-short int client_thread::fireNfreeze(short int &location_index,std::string &msg){
-	if(msg==""){
-		str = error_send(7,location_index,"Empty");
-		client_thread::error_fire(str);
-		return 7;
-	}
-	msg.append("!");
-	return client_thread::fire(location_index,msg);
-}
-
-short int client_thread::unfreeze(short int &location_index){
-	std::string tmp_msg {"!"};
-	//str = "!";
-	return client_thread::fire(location_index,tmp_msg);
-}
-
-short int client_thread::fireNcheck(short int &location_index,std::string &msg){
-	if(msg==""){
-		str = error_send(7,location_index,"Empty");
-		client_thread::error_fire(str);
-		return 7;
-	}
-	msg = "<"+msg+">";
-	return client_thread::fire(location_index,msg);
-}
-
-short int client_thread::uncheck(short int &location_index){
-	std::string tmp_msg {"<>"};
-	//str = "<>";
-	return client_thread::fire(location_index,tmp_msg);
-}
-
-inline void client_thread::search_runner(short int &location_index){
+inline short int client_thread::get_runner(short int location_index){
+	short int i;
+	int j;
 	i = amount-1;
-	for(;i>=0;--i){
-		if(location_list[i]==location_index){
-			j = waiting.size()-1;
-			for(;j>=0;--j){
-				if(waiting[j]==i){
-					break;
+	if(on_air==true){
+		for(;i>=0;--i){
+			if(location_list[i]==location_index){
+				j = waiting.size();
+				if(j>0){
+					--j;
+					for(;j>=0;--j){
+						if(waiting[j]==i){
+							break;
+						}
+					}
+					if(j==-1){
+						return i;
+					}
+				}
+				else{
+					return i;
 				}
 			}
-			if(j==-1){
-				break;
+		}
+		return -1;
+	}
+	else{
+		for(;i>=0;--i){
+			if(location_list[i]==location_index){
+				return i;
 			}
 		}
+		return -1;
 	}
 }
 
-void client_thread::recv_epoll(){
+void client_thread::recv_epoll_thread(){
 	int k,l,m;
-	char reply_thread[transport_size];
 	std::string tmp_str;
 	for(;;){
 		mx.lock();
@@ -350,17 +243,19 @@ void client_thread::recv_epoll(){
 		}
 		if(l==-1){
 			on_air = false;
-			epoll_0_thread = true;
+			epoll_0 = true;
 			mx.unlock();
 			break;
 		}
 		mx.unlock();
-		l = epoll_wait(epollfd, events, MAX_EVENTS, 1000*wait_maximum);
+		l = epoll_wait(epollfd, events, MAX_EVENTS, wait_maximum);
 		if(l==0){
-			epoll_0_thread = true;
+			epoll_0 = true;
+			std::cout << "epoll 0" << std::endl;
 			continue;
 		}
 		if(l>0){
+			std::cout << "recv_epoll l: " << l << std::endl;
 			--l;
 			for(;l>=0;--l){
 				m = waiting.size()-1;
@@ -369,78 +264,72 @@ void client_thread::recv_epoll(){
 						continue;
 					}
 					if(events[l].data.fd==socketfd[waiting[m]]){
+						std::cout << "recv_epoll: " << __LINE__ << std::endl;
 						if(events[l].events!=1){
 							if(store_reply[m]!=nullptr){
-								tmp_str = error_send(10,location_list[waiting[m]],*store_reply[m]);
+								tmp_str = error_msg(10,location_list[waiting[m]],*store_reply[m]);
 								store_reply[m]->clear();
+								std::cout << "recv_epoll: " << __LINE__ << std::endl;
 							}
 							else{
-								tmp_str = error_send(10,location_list[waiting[m]],"fireNforget");
+								tmp_str = error_msg(10,location_list[waiting[m]],"fireNforget");
+								std::cout << "recv_epoll: " << __LINE__ << std::endl;
 							}
 							close_runner(waiting[m]);
-							client_thread::error_fire(tmp_str);
+							error_fire(tmp_str);
 							waiting[m] = -1;
+							store_reply[m] = nullptr;
 							m = -1;
 							break;
 						}
-						tmp_str.clear();
-						for(;;){
-							k = recv(events[l].data.fd, reply_thread, transport_size, MSG_DONTWAIT);
-							if(k>0){
-								k += tmp_str.length();
-								tmp_str.append(reply_thread);
-								tmp_str.resize(k);
-								k = 0;
-								continue;
-							}
-							else if(k==-1){
-								k = 0;
-								break;
-							}
-							else if(k==0){
-								k = 3;
-								break;
-							}
+						if(read(waiting[m],tmp_str)==false){
+							std::cout << "recv_epoll: " << __LINE__ << std::endl;
+							k = 3;
+						}
+						else{
+							std::cout << "recv_epoll: " << __LINE__ << std::endl;
+							k = 0;
 						}
 						break;
 					}
 				}
 				if(m==-1){
+					std::cout << "recv_epoll: " << __LINE__ << std::endl;
 					continue;
 				}
 				if(k==3){
 					if(store_reply[m]!=nullptr){
-						tmp_str = error_send(3,location_list[waiting[m]],*store_reply[m]);
+						tmp_str = error_msg(3,location_list[waiting[m]],*store_reply[m]);
 						store_reply[m]->clear();
 					}
 					else{
-						tmp_str = error_send(3,location_list[waiting[m]],"Server crash (client_thread)");
+						tmp_str = error_msg(3,location_list[waiting[m]],"Server crash (client_thread)");
 					}
 					close_runner(waiting[m]);
-					client_thread::error_fire(tmp_str);
+					error_fire(tmp_str);
 				}
 				else{
 					if(tmp_str==""){
 						if(store_reply[m]!=nullptr){
-							tmp_str = error_send(4,location_list[waiting[m]],*store_reply[m]);
+							tmp_str = error_msg(4,location_list[waiting[m]],*store_reply[m]);
 							store_reply[m]->clear();
 						}
 						else{
-							tmp_str = error_send(4,location_list[waiting[m]],"No reply (client_thread)");
+							tmp_str = error_msg(4,location_list[waiting[m]],"No reply (client_thread)");
 						}
 						close_runner(waiting[m]);
-						client_thread::error_fire(tmp_str);
+						error_fire(tmp_str);
 					}
 					else{
 						if(tmp_str[0]=='0'){
 							if(store_reply[m]==nullptr){
-								tmp_str = reply_error_send(location_list[waiting[m]],"fireNforget",tmp_str);
+								tmp_str = reply_error_msg(location_list[waiting[m]],"fireNforget",tmp_str);
 							}
 							else{
-								tmp_str = reply_error_send(location_list[waiting[m]],*store_reply[m],tmp_str);
+								tmp_str = reply_error_msg(location_list[waiting[m]],*store_reply[m],tmp_str);
 								*store_reply[m] = "0";
 							}
-							client_thread::error_fire(tmp_str);
+							error_fire(tmp_str);
 						}
 						else{
 							if(store_reply[m]!=nullptr){
@@ -450,16 +339,17 @@ void client_thread::recv_epoll(){
 					}
 				}
 				waiting[m] = -1;
+				store_reply[m] = nullptr;
 				continue;
 			}
 		}
 		else{
 			tmp_str = strerror(errno);
-			tmp_str = error_send(6,-1,tmp_str);
-			client_thread::error_fire(tmp_str);
+			tmp_str = error_msg(6,-1,tmp_str);
+			error_fire(tmp_str);
 			mx.lock();
 			on_air = false;
-			epoll_0_thread = true;
+			epoll_0 = true;
 			mx.unlock();
 			break;
 		}
@@ -471,13 +361,13 @@ bool client_thread::join(short int &location_index){
 	bool boo {true};
 	mx.lock();
 	if(on_air==true){
-		epoll_0_thread = false;
+		epoll_0 = false;
 	}
 	else{
-		epoll_0_thread = true;
+		epoll_0 = true;
 	}
 	mx.unlock();
-	while(epoll_0_thread==false){}
+	while(epoll_0==false){}
 	a = amount-1;
 	w_size = waiting.size();
 	for(;a>=0;--a){
@@ -490,8 +380,8 @@ bool client_thread::join(short int &location_index){
 			if(b<w_size){
 				close_runner(a);
 				waiting[b] = -1;
-				str = error_send(4,location_index,"client_thread::join");
-				client_thread::error_fire(str);
+				store_reply[b] = nullptr;
+				error_fire(error_msg(4,location_index,"client_thread::join"));
 				boo = false;
 			}
 		}
@@ -503,12 +393,12 @@ bool client_thread::join_store(short int &location_index){
 	short int a,b,w_size;
 	bool boo {true};
 	if(on_air==true){
-		epoll_0_thread = false;
+		epoll_0 = false;
 	}
 	else{
-		epoll_0_thread = true;
+		epoll_0 = true;
 	}
-	while(epoll_0_thread==false){}
+	while(epoll_0==false){}
 	w_size = waiting.size();
 	a = amount-1;
 	for(;a>=0;--a){
@@ -521,8 +411,8 @@ bool client_thread::join_store(short int &location_index){
 			if(b<w_size){
 				close_runner(a);
 				waiting[b] = -1;
-				str = error_send(4,location_index,"client_thread::join_store");
-				client_thread::error_fire(str);
+				store_reply[b] = nullptr;
+				error_fire(error_msg(4,location_index,"client_thread::join_store"));
 				boo = false;
 			}
 		}
@@ -534,12 +424,12 @@ bool client_thread::join_forget(short int &location_index){
 	short int a,b,w_size;
 	bool boo {true};
 	if(on_air==true){
-		epoll_0_thread = false;
+		epoll_0 = false;
 	}
 	else{
-		epoll_0_thread = true;
+		epoll_0 = true;
 	}
-	while(epoll_0_thread==false){}
+	while(epoll_0==false){}
 	w_size = waiting.size();
 	a = amount-1;
 	for(;a>=0;--a){
@@ -552,8 +442,7 @@ bool client_thread::join_forget(short int &location_index){
 			if(b<w_size){
 				close_runner(a);
 				waiting[b] = -1;
-				str = error_send(4,location_index,"client_thread::join_forget");
-				client_thread::error_fire(str);
+				error_fire(error_msg(4,location_index,"client_thread::join_forget"));
 				boo = false;
 			}
 		}
@@ -565,21 +454,21 @@ void client_thread::reset_thread(){
 	short int a,b;
 	mx.lock();
 	if(on_air==true){
-		epoll_0_thread = false;
+		epoll_0 = false;
 	}
 	else{
-		epoll_0_thread = true;
+		epoll_0 = true;
 	}
 	mx.unlock();
-	while(epoll_0_thread==false){}
+	while(epoll_0==false){}
 	b = waiting.size()-1;
 	for(;b>=0;--b){
 		a = waiting[b];
 		if(a>=0){
-			str = error_send(4,location_list[a],"client_thread::reset_thread");
 			close_runner(a);
 			waiting[b] = -1;
-			client_thread::error_fire(str);
+			store_reply[b] = nullptr;
+			error_fire(error_msg(4,location_list[a],"client_thread::reset_thread"));
 		}
 	}
 }

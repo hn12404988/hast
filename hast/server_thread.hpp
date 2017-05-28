@@ -2,6 +2,7 @@
 #define hast_server_thread_hpp
 #include <mutex>
 #include <thread>
+#include <iostream> //only use in dev mode
 
 namespace hast{
 	const char WAIT {0};

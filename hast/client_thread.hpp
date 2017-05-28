@@ -19,35 +19,31 @@
  *************************************************************/
 
 class client_thread : public client_core{
-private:
-	std::vector<std::string*> store_reply;
-	std::vector<short int> waiting; //for i index
-	std::thread *thread {nullptr};
+protected:
+	std::vector<std::string*> store_reply; //store nullptr for `fireNforget` and pointer for `fireNstore`
+	std::vector<short int> waiting; //store runner_index
+	std::thread *thread {nullptr}; //recv thread
 	std::mutex mx;
-	bool on_air {false};
-	bool epoll_0_thread;
-	inline void build_runner(short int &location_index);
+	bool on_air {false}; // recv_thread is working or not.
+	bool epoll_0 {false}; // epoll_wait return 0 in recv_thread is happened.
+	inline short int build_runner(short int location_index) override;
 	inline void clear_waiting();
-	inline void search_runner(short int &location_index);
+	inline short int get_runner(short int location_index) override;
 	inline bool recycle_thread();
-	void recv_epoll();
+	void recv_epoll_thread();
+	/**
+	 * `fireNstore` and `fireNforget` use `fire_thread` to fire message.
+	 **/
 	short int fire_thread(short int &location_index, std::string &msg, std::string *reply);
-	inline void error_fire(std::string msg);
 public:
 	~client_thread();
-	short int fire(short int &location_index,std::string &msg);
 	short int fireNstore(short int &location_index, std::string &msg);
 	short int fireNforget(short int &location_index, std::string &msg);
-	short int fireNclose(short int &location_index,std::string &msg);
-	short int fireNfreeze(short int &location_index,std::string &msg);
-	short int fireNcheck(short int &location_index,std::string &msg);
-	short int uncheck(short int &location_index);
-	short int unfreeze(short int &location_index);
 	bool join(short int &location_index);
 	bool join_store(short int &location_index);
 	bool join_forget(short int &location_index);
 	void reset_thread();
-	void multi_con(short int &location_index, short int unsigned amount);
+	bool multi_con(short int &location_index, short int unsigned amount);
 };
 #include <hast/client_thread.cpp>
 #endif /* hast_client_thread_hpp */
