@@ -5,21 +5,8 @@
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 
-/******************** Error Flag *****************************
- * 1: Server doesn't exist, or socket has problem.
- * 2: Fail on sending message.
- * 3: Server's execution crash.
- * 4: No reply.
- * 5: waiting list of cient_thread jam.
- * 6: Fail on epoll.
- * 7: Invalid message format.
- * 8: runner is not enough (client_thread).
- * 9: thread joinable is false (client_thread).
- * 10: epoll events is not 1.
- *************************************************************/
-
 /**
- * Address start with: `TLS` is transported under TLS.
+ * Address start with: `TLS:` is communicating under TLS.
  **/
 
 class client_core_tls : public client_core{
@@ -29,7 +16,10 @@ protected:
 	bool *TLS {nullptr}; // Record which server is transported under TLS in location.
 	SSL **ssl {nullptr}; // runner list with TLS
 	bool TLS_init();
-	inline void close_runner(short int index);
+	inline short int build_runner(short int location_index) override;
+	inline void close_runner(short int runner_index) override;
+	char write(short int &runner_index, short int location_index, std::string &msg) override;
+	char read(short int runner_index, std::string &reply_str) override;
 public:
 	client_core_tls();
 	~client_core_tls();

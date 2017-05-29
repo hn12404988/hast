@@ -26,6 +26,7 @@
  * 6: Invalid message format.
  * 7: thread joinable is false (client_thread).
  * 8: epoll events is not 1.
+ * 9: SSL_READ fail.
  *************************************************************/
 
 namespace hast_client{
@@ -38,6 +39,7 @@ namespace hast_client{
 	const char FORMAT {6};
 	const char JOIN {7};
 	const char EPOLL_EV {8};
+	const char SSL_r {9};
 };
 #define MAX_EVENTS 5
 
@@ -55,7 +57,15 @@ protected:
 	int *socketfd {nullptr};
 	short int *location_list {nullptr};
 	
-	inline void close_runner(short int runner_index);
+	virtual inline void close_runner(short int runner_index){
+		if(socketfd[runner_index]!=-1){
+			epoll_ctl(epollfd, EPOLL_CTL_DEL, socketfd[runner_index],nullptr);
+			shutdown(socketfd[runner_index],SHUT_RDWR);
+			close(socketfd[runner_index]);
+			socketfd[runner_index] = -1;
+		}
+		location_list[runner_index] = -1;
+	}
 	inline bool build_on_i(short int i, short int location_index);
 	virtual inline short int build_runner(short int location_index){
 		short int runner_index;

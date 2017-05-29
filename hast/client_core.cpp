@@ -14,16 +14,6 @@ client_core::~client_core(){
 	}
 }
 
-inline void client_core::close_runner(short int runner_index){
-	if(socketfd[runner_index]!=-1){
-		epoll_ctl(epollfd, EPOLL_CTL_DEL, socketfd[runner_index],nullptr);
-		shutdown(socketfd[runner_index],SHUT_RDWR);
-		close(socketfd[runner_index]);
-		socketfd[runner_index] = -1;
-	}
-	location_list[runner_index] = -1;
-}
-
 std::string client_core::error_msg(const char flag, short int location_index, std::string msg){
 	if(error_socket_index==-1){
 		std::cout << "Client didn't set error node, so here are the error messages." << std::endl;
@@ -91,8 +81,8 @@ void client_core::import_location(std::vector<std::string> *location, short int 
 			this->amount = amount;
 		}
 		if(socketfd==nullptr && location_list==nullptr){
-			socketfd = new int [amount];
-			location_list = new short int [amount];
+			socketfd = new int [this->amount];
+			location_list = new short int [this->amount];
 		}
 		for(a=0;a<this->amount;++a){
 			socketfd[a] = -1;
