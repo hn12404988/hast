@@ -6,7 +6,8 @@
 int main(){
 	std::string msg;
 	client_core client;
-	short int to_s1 {1},error_flag;
+	short int to_s1 {1};
+	char error_flag;
 	std::vector<std::string> location;
 	location.push_back("127.0.0.1:8888");
 	location.push_back("server.socket");
@@ -15,7 +16,7 @@ int main(){
 
 	msg = "1";
 	error_flag = client.fire(to_s1,msg);
-	if(error_flag==0){
+	if(error_flag==hast_client::SUCCESS){
 		std::cout << "/****** Client Success ********/" << std::endl;
 		std::cout << msg << std::endl;
 	}
@@ -25,7 +26,7 @@ int main(){
 	
 	msg = "0";
 	error_flag = client.fire(to_s1,msg);
-	if(error_flag==0){
+	if(error_flag==hast_client::SUCCESS){
 		std::cout << "/****** Client Success ********/" << std::endl;
 		std::cout << msg << std::endl;
 	}

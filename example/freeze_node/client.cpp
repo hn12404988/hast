@@ -7,7 +7,8 @@ int main(){
 	std::string msg,msg2;
 	client_core c1;
 	client_thread c2;
-	short int to_s1 {0},error_flag;
+	short int to_s1 {0};
+	char error_flag;
 	c2.set_wait_maximum(10);
 	std::vector<std::string> location;
 	location.push_back("server.socket");
@@ -15,7 +16,7 @@ int main(){
 	c2.import_location(&location,2);
 	msg = "freeze"; // change to (msg = '!') will freeze all thread in server
 	error_flag = c1.fireNfreeze(to_s1,msg);
-	if(error_flag==0){
+	if(error_flag==hast_client::SUCCESS){
 		std::cout << "/****** c1 freeze server by msg successfully ********/" << std::endl;
 	}
 	else{
@@ -23,7 +24,7 @@ int main(){
 	}
 	msg = "freeze";
 	error_flag = c2.fireNstore(to_s1,msg);
-	if(error_flag==0){
+	if(error_flag==hast_client::SUCCESS){
 		std::cout << "/****** c2 fireNforget 'freeze' successfully ********/" << std::endl;
 	}
 	else{
@@ -31,7 +32,7 @@ int main(){
 	}
 	msg2 = "normal msg";
 	error_flag = c2.fireNstore(to_s1,msg2);
-	if(error_flag==0){
+	if(error_flag==hast_client::SUCCESS){
 		std::cout << "/****** c2 fireNforget 'normal msg' successfully ********/" << std::endl;
 	}
 	else{

@@ -6,7 +6,7 @@
 int main(){
 	std::string msg;
 	client_core client;
-	short int error_flag;
+	char error_flag;
 	client.set_wait_maximum(1); //Maximum time of waiting reply. Set to 1 seconds. (default 2 seconds)
 	std::vector<std::string> location; // The list of server's address.
 	/**
@@ -19,7 +19,7 @@ int main(){
 	client.import_location(&location); //Import the list to client class.
 	msg = "hi, this is client 1";
 	error_flag = client.fire(to_s1,msg);
-	if(error_flag==0){
+	if(error_flag==hast_client::SUCCESS){
 		std::cout << "/****** Client Success ********/" << std::endl;
 		std::cout << msg << std::endl;
 	}
