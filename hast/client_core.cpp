@@ -24,7 +24,7 @@ inline void client_core::close_runner(short int runner_index){
 	location_list[runner_index] = -1;
 }
 
-std::string client_core::error_msg(short int flag, short int location_index, std::string msg){
+std::string client_core::error_msg(const char flag, short int location_index, std::string msg){
 	if(error_socket_index==-1){
 		std::cout << "Client didn't set error node, so here are the error messages." << std::endl;
 		std::cout << "Flag: " << flag << std::endl;
@@ -42,10 +42,10 @@ std::string client_core::error_msg(short int flag, short int location_index, std
 	}
 	else{
 		if(location_index<0){
-			msg = "{\"type\":\"socket\",\"from_node\":\""+node_name+"\",\"to_node\":\"NULL\",\"message\":\""+msg+"\",\"message2\":\""+std::to_string(flag)+"\"}";
+			msg = "{\"type\":\"socket\",\"from_node\":\""+node_name+"\",\"to_node\":\"NULL\",\"message\":\""+msg+"\",\"message2\":\""+flag+"\"}";
 		}
 		else{
-			msg = "{\"type\":\"socket\",\"from_node\":\""+node_name+"\",\"to_node\":\""+(*location)[location_index]+"\",\"message\":\""+msg+"\",\"message2\":\""+std::to_string(flag)+"\"}";
+			msg = "{\"type\":\"socket\",\"from_node\":\""+node_name+"\",\"to_node\":\""+(*location)[location_index]+"\",\"message\":\""+msg+"\",\"message2\":\""+flag+"\"}";
 		}
 		return msg;
 	}
@@ -161,10 +161,11 @@ inline bool client_core::build_on_i(short int i, short int location_index){
 	return true;
 }
 
-short int client_core::shutdown_server(short int &location_index,std::string &shutdown_code){
-	short int a,runner_bk;
+char client_core::shutdown_server(short int &location_index,std::string &shutdown_code){
+	short int runner_bk;
+	char a;
 	a = fire_return(location_index,shutdown_code,runner_bk);
-	if(a==0){
+	if(a==hast_client::SUCCESS){
 		close_runner(runner_bk);
 		shutdown_code = "shutdown";
 		return fire(location_index,shutdown_code);
@@ -174,32 +175,33 @@ short int client_core::shutdown_server(short int &location_index,std::string &sh
 	}
 }
 
-short int client_core::fire_return(short int &location_index,std::string &msg, short int &runner_bk){
-	short int runner_index,a;
+char client_core::fire_return(short int &location_index,std::string &msg, short int &runner_bk){
+	short int runner_index;
+	char a;
 	std::string reply;
 	if(msg==""){
-		error_fire(error_msg(7,location_index,"Empty"));
-		return 7;
+		error_fire(error_msg(hast_client::FORMAT,location_index,"Empty"));
+		return hast_client::FORMAT;
 	}
 	runner_index = get_runner(location_index);
 	if(runner_index==-1){
 		runner_index = build_runner(location_index);
 	}
 	if(runner_index==-1){
-		msg = error_msg(1,location_index,msg);
+		msg = error_msg(hast_client::EXIST,location_index,msg);
 		error_fire(msg);
 		msg.clear();
 		runner_bk = -1;
-		return 1;
+		return hast_client::EXIST;
 	}
 	a = write(runner_index,location_index,msg);
 	runner_bk = runner_index;
-	if(a>0){
+	if(a!=hast_client::SUCCESS){
 		runner_bk = -1;
 		return a;
 	}
 	a = receive(runner_index, reply);
-	if(a>0){
+	if(a!=hast_client::SUCCESS){
 		reply = error_msg(a,location_index,msg);
 		close_runner(runner_index);
 		runner_bk = -1;
@@ -209,12 +211,12 @@ short int client_core::fire_return(short int &location_index,std::string &msg, s
 	}
 	else{
 		if(reply==""){
-			reply = error_msg(4,location_index,msg);
+			reply = error_msg(hast_client::REPLY,location_index,msg);
 			close_runner(runner_index);
 			runner_bk = -1;
 			error_fire(reply);
 			msg.clear();
-			return 4;
+			return hast_client::REPLY;
 		}
 		else{
 			if(reply[0]=='0'){
@@ -226,34 +228,35 @@ short int client_core::fire_return(short int &location_index,std::string &msg, s
 			else{
 				msg = reply;
 			}
-			return 0;
+			return hast_client::SUCCESS;
 		}
 	}
 }
 
-short int client_core::fire(short int &location_index,std::string &msg){
-	short int runner_index,a;
+char client_core::fire(short int &location_index,std::string &msg){
+	short int runner_index;
+	char a;
 	std::string reply;
 	if(msg==""){
-		error_fire(error_msg(7,location_index,"Empty"));
-		return 7;
+		error_fire(error_msg(hast_client::FORMAT,location_index,"Empty"));
+		return hast_client::FORMAT;
 	}
 	runner_index = get_runner(location_index);
 	if(runner_index==-1){
 		runner_index = build_runner(location_index);
 	}
 	if(runner_index==-1){
-		msg = error_msg(1,location_index,msg);
+		msg = error_msg(hast_client::EXIST,location_index,msg);
 		error_fire(msg);
 		msg.clear();
-		return 1;
+		return hast_client::EXIST;
 	}
 	a = write(runner_index,location_index,msg);
-	if(a>0){
+	if(a!=hast_client::SUCCESS){
 		return a;
 	}
 	a = receive(runner_index, reply);
-	if(a>0){
+	if(a!=hast_client::SUCCESS){
 		reply = error_msg(a,location_index,msg);
 		close_runner(runner_index);
 		error_fire(reply);
@@ -262,11 +265,11 @@ short int client_core::fire(short int &location_index,std::string &msg){
 	}
 	else{
 		if(reply==""){
-			reply = error_msg(4,location_index,msg);
+			reply = error_msg(hast_client::REPLY,location_index,msg);
 			close_runner(runner_index);
 			error_fire(reply);
 			msg.clear();
-			return 4;
+			return hast_client::REPLY;
 		}
 		else{
 			if(reply[0]=='0'){
@@ -278,12 +281,12 @@ short int client_core::fire(short int &location_index,std::string &msg){
 			else{
 				msg = reply;
 			}
-			return 0;
+			return hast_client::SUCCESS;
 		}
 	}
 }
 
-inline short int client_core::receive(short int runner_index,std::string &reply){
+inline char client_core::receive(short int runner_index,std::string &reply){
 	int len;
 	for(;;){
 		len = epoll_wait(epollfd, events, MAX_EVENTS, wait_maximum);
@@ -292,7 +295,7 @@ inline short int client_core::receive(short int runner_index,std::string &reply)
 			for(;len>=0;--len){
 				if(events[len].data.fd==socketfd[runner_index]){
 					if(events[len].events!=1){
-						return 10;
+						return hast_client::EPOLL_EV;
 					}
 					break;
 				}
@@ -301,19 +304,14 @@ inline short int client_core::receive(short int runner_index,std::string &reply)
 				continue;
 			}
 			else{
-				if(read(runner_index,reply)==true){
-					return 0;
-				}
-				else{
-					return 3;
-				}
+				return read(runner_index,reply);
 			}
 		}
 		else if(len==0){
-			return 4;
+			return hast_client::REPLY;
 		}
 		else if(len==-1){
-			return 6;
+			return hast_client::EPOLL;
 		}
 	}
 }
@@ -326,46 +324,35 @@ inline void client_core::error_fire(std::string msg){
 	}
 }
 
-short int client_core::fireNclose(short int &location_index,std::string &msg){
-	short int a,runner_bk;
+char client_core::fireNclose(short int &location_index,std::string &msg){
+	short int runner_bk;
+	char a;
 	a = fire_return(location_index,msg,runner_bk);
-	if(a==0){
+	if(a==hast_client::SUCCESS){
 		close_runner(runner_bk);
-		return 0;
+		return hast_client::SUCCESS;
 	}
 	else{
 		return a;
 	}
 }
 
-short int client_core::fireNfreeze(short int &location_index,std::string &msg){
-	if(msg==""){
-		msg = error_msg(7,location_index,"Empty");
-		error_fire(msg);
-		msg.clear();
-		return 7;
-	}
+char client_core::fireNfreeze(short int &location_index,std::string &msg){
 	msg.append("!");
 	return fire(location_index,msg);
 }
 
-short int client_core::unfreeze(short int &location_index){
+char client_core::unfreeze(short int &location_index){
 	std::string tmp_msg {"!"};
 	return fire(location_index,tmp_msg);
 }
 
-short int client_core::fireNcheck(short int &location_index,std::string &msg){
-	if(msg==""){
-		msg = error_msg(7,location_index,"Empty");
-		error_fire(msg);
-		msg.clear();
-		return 7;
-	}
+char client_core::fireNcheck(short int &location_index,std::string &msg){
 	msg = "<"+msg+">";
 	return fire(location_index,msg);
 }
 
-short int client_core::uncheck(short int &location_index){
+char client_core::uncheck(short int &location_index){
 	std::string tmp_msg {"<>"};
 	return fire(location_index,tmp_msg);
 }
@@ -400,10 +387,8 @@ std::vector<std::string> client_core::get_error_flag(){
 			"Fail on sending message",
 			"Server's execution crash",
 			"No reply",
-			"waiting list of cient_thread jam",
 			"Fail on epoll",
 			"Invalid message format",
-			"runner is not enough (client_thread)",
 			"thread joinable is false (client_thread)",
 			"epoll events is not 1"};
 	return list;

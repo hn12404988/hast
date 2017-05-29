@@ -22,14 +22,23 @@
  * 2: Fail on sending message.
  * 3: Server's execution crash.
  * 4: No reply.
- * 5: waiting list of cient_thread jam.
- * 6: Fail on epoll.
- * 7: Invalid message format.
- * 8: runner is not enough (client_thread).
- * 9: thread joinable is false (client_thread).
- * 10: epoll events is not 1.
+ * 5: Fail on epoll.
+ * 6: Invalid message format.
+ * 7: thread joinable is false (client_thread).
+ * 8: epoll events is not 1.
  *************************************************************/
 
+namespace hast_client{
+	const char SUCCESS {0};
+	const char EXIST {1};
+	const char SEND {2}; 
+	const char CRASH {3};
+	const char REPLY {4};
+	const char EPOLL {5};
+	const char FORMAT {6};
+	const char JOIN {7};
+	const char EPOLL_EV {8};
+};
 #define MAX_EVENTS 5
 
 class client_core : public tcp_config{
@@ -68,12 +77,12 @@ protected:
 			return build_runner(location_index);
 		}
 	}
-	inline short int receive(short int runner_index,std::string &reply);
-	std::string error_msg(short int flag, short int index, std::string msg);
+	inline char receive(short int runner_index,std::string &reply);
+	std::string error_msg(const char flag, short int index, std::string msg);
 	std::string reply_error_msg(short int index, std::string msg, std::string reply);
 	inline void error_fire(std::string msg);
 	inline short int up(short int runner_index);
-	short int fire_return(short int &location_index,std::string &msg, short int &runner_bk);
+	char fire_return(short int &location_index,std::string &msg, short int &runner_bk);
 	virtual inline short int get_runner(short int location_index){
 		short int runner_index;
 		for(runner_index=0;runner_index<amount;++runner_index){
@@ -89,7 +98,7 @@ protected:
 			return runner_index;
 		}
 	}
-	virtual short int write(short int &runner_index, short int location_index, std::string &msg){
+	virtual char write(short int &runner_index, short int location_index, std::string &msg){
 		if( send(socketfd[runner_index] , msg.c_str() , msg.length() , 0) < 0){
 			close_runner(runner_index);
 			runner_index = get_runner(location_index);
@@ -97,23 +106,23 @@ protected:
 				runner_index = build_runner(location_index);
 			}
 			if(runner_index==-1){
-				msg = error_msg(1,location_index,msg);
+				msg = error_msg(hast_client::EXIST,location_index,msg);
 				error_fire(msg);
 				msg.clear();
-				return 1;
+				return hast_client::EXIST;
 			}
 			if( send(socketfd[runner_index] , msg.c_str() , msg.length() , 0) < 0){
 				close_runner(runner_index);
 				runner_index = -1;
-				msg = error_msg(2,location_index,msg);
+				msg = error_msg(hast_client::SEND,location_index,msg);
 				error_fire(msg);
 				msg.clear();
-				return 2;
+				return hast_client::SEND;
 			}
 		}
-		return 0;
+		return hast_client::SUCCESS;
 	}
-	virtual bool read(short int runner_index, std::string &reply_str){
+	virtual char read(short int runner_index, std::string &reply_str){
 		reply_str.clear();
 		int len;
 		char reply[transport_size];
@@ -123,24 +132,24 @@ protected:
 				reply_str.append(reply,len);
 			}
 			else if(len==-1){
-				return true;
+				return hast_client::SUCCESS;
 			}
 			else if(len==0){
 				reply_str.clear();
-				return false;
+				return hast_client::CRASH;
 			}
 		}
 	}
 public:
 	client_core();
 	~client_core();
-	short int fire(short int &location_index,std::string &msg);
-	short int fireNclose(short int &location_index,std::string &msg);
-	short int fireNfreeze(short int &location_index,std::string &msg);
-	short int fireNcheck(short int &location_index,std::string &msg);
-	short int unfreeze(short int &location_index);
-	short int uncheck(short int &location_index);
-	short int shutdown_server(short int &location_index,std::string &shutdown_code);
+	char fire(short int &location_index,std::string &msg);
+	char fireNclose(short int &location_index,std::string &msg);
+	char fireNfreeze(short int &location_index,std::string &msg);
+	char fireNcheck(short int &location_index,std::string &msg);
+	char unfreeze(short int &location_index);
+	char uncheck(short int &location_index);
+	char shutdown_server(short int &location_index,std::string &shutdown_code);
 	void import_location(std::vector<std::string> *location, short int unsigned amount = 0);
 	void set_wait_maximum(short int wait);
 	void set_error_node(short int socket_index,const char* file_name);
