@@ -1,6 +1,6 @@
 #include <iostream>
-#include <hast/unix_server.hpp>
-unix_server server;
+#include <hast/tcp_server.hpp>
+tcp_server server;
 
 auto execute = [&](const short int index){
 	std::string str;
@@ -18,7 +18,7 @@ auto execute = [&](const short int index){
 int main(){
 	server.execute = execute;
 	server.msg_freeze = true;
-	if(server.init(__FILE__)==false){
+	if(server.init("8888")==false){
 		std::cout << "Server can't init at file: " << __FILE__ << std::endl;
 	}
 	else{

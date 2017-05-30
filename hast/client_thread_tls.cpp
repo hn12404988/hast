@@ -1,8 +1,8 @@
-client_core_tls::client_core_tls(){
+client_thread_tls::client_thread_tls(){
 	
 }
 
-client_core_tls::~client_core_tls(){
+client_thread_tls::~client_thread_tls(){
 	short int a;
 	if(ssl!=nullptr){
 		for(a=0;a<amount;++a){
@@ -32,7 +32,7 @@ client_core_tls::~client_core_tls(){
 	ERR_free_strings();
 }
 
-bool client_core_tls::TLS_init(){
+bool client_thread_tls::TLS_init(){
 	/* ---------------------------------------------------------- *
 	 * These function calls initialize openssl for correct work.  *
 	 * ---------------------------------------------------------- */
@@ -63,7 +63,7 @@ bool client_core_tls::TLS_init(){
 	return true;
 }
 
-bool client_core_tls::import_location(std::vector<std::string> *location, short int unsigned amount){
+bool client_thread_tls::import_location(std::vector<std::string> *location, short int unsigned amount){
 	if(TLS_init()==false){
 		return false;
 	}
@@ -83,7 +83,7 @@ bool client_core_tls::import_location(std::vector<std::string> *location, short 
 			TLS[a] = false;
 		}
 	}
-	client_core::import_location(location,amount);
+	client_thread::import_location(location,amount);
 	a = client_core::amount;
 	if(ssl==nullptr){
 		ssl = new SSL* [a];
@@ -95,16 +95,17 @@ bool client_core_tls::import_location(std::vector<std::string> *location, short 
 	return true;
 }
 
-inline short int client_core_tls::build_runner(short int location_index){
+inline short int client_thread_tls::build_runner(short int location_index){
 	short int runner_index;
 	int err;
-	runner_index = client_core::build_runner(location_index);
+	runner_index = client_thread::build_runner(location_index);
 	if(runner_index==-1){
 		return -1;
 	}
 	if(TLS[location_index]==true){
 		ssl[runner_index] = SSL_new(ctx);
 		SSL_set_fd(ssl[runner_index], socketfd[runner_index]);
+		//std::cout << "SSL_connect start" << std::endl;
 		for(;;){
 			err = SSL_connect(ssl[runner_index]);
 			if(err==1){
@@ -113,7 +114,7 @@ inline short int client_core_tls::build_runner(short int location_index){
 			}
 			else if(err==0){
 				//std::cout << "SSL_connect fail 0" << std::endl;
-				close_runner(runner_index);
+				client_thread_tls::close_runner(runner_index);
 				return -1;
 			}
 			else{
@@ -124,7 +125,7 @@ inline short int client_core_tls::build_runner(short int location_index){
 				}
 				else{
 					//std::cout << "SSL_connect fail err" << std::endl;
-					client_core_tls::close_runner(runner_index);
+					client_thread_tls::close_runner(runner_index);
 					return -1;
 				}
 			}
@@ -133,7 +134,7 @@ inline short int client_core_tls::build_runner(short int location_index){
 	return runner_index;
 }
 
-inline void client_core_tls::close_runner(short int runner_index){
+inline void client_thread_tls::close_runner(short int runner_index){
 	if(ssl[runner_index]!=nullptr){
 		SSL_free(ssl[runner_index]);
 		ssl[runner_index] = nullptr;
@@ -141,16 +142,16 @@ inline void client_core_tls::close_runner(short int runner_index){
 	client_core::close_runner(runner_index);
 }
 
-char client_core_tls::write(short int &runner_index, short int location_index, std::string &msg){
+char client_thread_tls::write(short int &runner_index, short int location_index, std::string &msg){
 	if(TLS[location_index]==false){
 		return client_core::write(runner_index,location_index,msg);
 	}
 	else{
 		if( SSL_write(ssl[runner_index], msg.c_str(), msg.length()) <= 0){
-			client_core_tls::close_runner(runner_index);
+			client_thread_tls::close_runner(runner_index);
 			runner_index = get_runner(location_index);
 			if(runner_index==-1){
-				runner_index = client_core_tls::build_runner(location_index);
+				runner_index = client_thread_tls::build_runner(location_index);
 			}
 			if(runner_index==-1){
 				msg = error_msg(hast_client::EXIST,location_index,msg);
@@ -171,7 +172,7 @@ char client_core_tls::write(short int &runner_index, short int location_index, s
 	}
 }
 
-char client_core_tls::read(short int runner_index, std::string &reply_str){
+char client_thread_tls::read(short int runner_index, std::string &reply_str){
 	if(TLS[location_list[runner_index]]==false){
 		return client_core::read(runner_index,reply_str);
 	}

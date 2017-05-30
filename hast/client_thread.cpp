@@ -44,7 +44,7 @@ bool client_thread::multi_con(short int &location_index, short int unsigned amou
 		if(j==amount){
 			break;
 		}
-		if(client_thread::build_runner(location_index)==-1){
+		if(build_runner(location_index)==-1){
 			return false;
 		}
 		++j;
@@ -53,38 +53,6 @@ bool client_thread::multi_con(short int &location_index, short int unsigned amou
 		return false;
 	}
 	return true;
-}
-
-inline short int client_thread::build_runner(short int location_index){
-	short int i;
-	i = amount-1;
-	for(;i>=0;--i){
-		if(socketfd[i]==-1){
-			if(build_on_i(i,location_index)==true){
-				location_list[i] = location_index;
-				return i;
-			}
-			else{
-				return -1;
-			}
-		}
-	}
-	i = amount - 1;
-	if(on_air==true){
-		for(;i>=0;--i){
-			if(waiting[i]==false){
-				close_runner(i);
-				return client_thread::build_runner(location_index);
-			}
-			if(i==0){
-				i = amount - 1;
-			}
-		}
-	}
-	else{
-		close_runner(i);
-		return client_thread::build_runner(location_index);
-	}
 }
 
 inline bool client_thread::recycle_thread(){
@@ -114,7 +82,7 @@ char client_thread::fire_thread(short int &location_index, std::string &msg, std
 	}
 	runner_index = get_runner(location_index);
 	if(runner_index==-1){
-		runner_index = client_thread::build_runner(location_index);
+		runner_index = build_runner(location_index);
 	}
 	if(runner_index==-1){
 		error_fire(error_msg(hast_client::EXIST,location_index,"fire_thread"));

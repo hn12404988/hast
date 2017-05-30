@@ -5,6 +5,7 @@ bool tcp_server::init(hast::tcp_socket::port port, short int unsigned max){
 	max_thread = max;
 	server_thread::init();
 	if(getaddrinfo(NULL, port.c_str(), &hints, &res)!=0){
+		//fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(s));
 		return false;
 	}
 	struct addrinfo *p{NULL};

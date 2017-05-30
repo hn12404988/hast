@@ -11,7 +11,7 @@ int main(){
 	char error_flag;
 	c2.set_wait_maximum(10);
 	std::vector<std::string> location;
-	location.push_back("server.socket");
+	location.push_back("172.18.0.3:8888");
 	c1.import_location(&location);
 	c2.import_location(&location,2);
 	msg = "freeze"; // change to (msg = '!') will freeze all thread in server
@@ -25,18 +25,18 @@ int main(){
 	msg = "freeze";
 	error_flag = c2.fireNstore(to_s1,msg);
 	if(error_flag==hast_client::SUCCESS){
-		std::cout << "/****** c2 fireNforget 'freeze' successfully ********/" << std::endl;
+		std::cout << "/****** c2 fireNstore 'freeze' successfully ********/" << std::endl;
 	}
 	else{
-		std::cout << "/****** c2 fail on fireNforget 'freeze' ********/" << std::endl;
+		std::cout << "/****** c2 fail on fireNstore 'freeze' ********/" << std::endl;
 	}
 	msg2 = "normal msg";
 	error_flag = c2.fireNstore(to_s1,msg2);
 	if(error_flag==hast_client::SUCCESS){
-		std::cout << "/****** c2 fireNforget 'normal msg' successfully ********/" << std::endl;
+		std::cout << "/****** c2 fireNstore 'normal msg' successfully ********/" << std::endl;
 	}
 	else{
-		std::cout << "/****** c2 fail on fireNforget 'normal msg' ********/" << std::endl;
+		std::cout << "/****** c2 fail on fireNstore 'normal msg' ********/" << std::endl;
 	}
 	std::this_thread::sleep_for(std::chrono::milliseconds(2000));
 	if(c1.unfreeze(to_s1)==0){

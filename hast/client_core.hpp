@@ -2,18 +2,20 @@
 #define hast_client_core_hpp
 
 #include <iostream>
-#include<sys/socket.h>
+#include <sys/socket.h>
 #include <sys/types.h>
 #include <netdb.h>
 #include <string.h>
 #include <string>
 #include <sys/un.h>
 #include <vector>
-#include<unistd.h>    //close
+#include <unistd.h>    //close
 #include <sys/epoll.h>
 #include <hast/tcp_config.hpp>
 #include <hast/unix_config.hpp>
 #include <cstring> //errno
+#include <fcntl.h> //For TCP socket using non-block
+
 //#include<arpa/inet.h> //inet_addr
 //#include <netinet/in.h>
 
@@ -92,6 +94,7 @@ protected:
 	std::string reply_error_msg(short int index, std::string msg, std::string reply);
 	inline void error_fire(std::string msg);
 	inline short int up(short int runner_index);
+	void echo_flag(const char flag);
 	char fire_return(short int &location_index,std::string &msg, short int &runner_bk);
 	virtual inline short int get_runner(short int location_index){
 		short int runner_index;

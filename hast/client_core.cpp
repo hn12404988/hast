@@ -14,7 +14,44 @@ client_core::~client_core(){
 	}
 }
 
+void client_core::echo_flag(const char flag){
+	switch(flag){
+	case hast_client::EXIST:
+		std::cout << "No server" << std::endl;
+		break;
+	case hast_client::SEND:
+		std::cout << "Fail on sending" << std::endl;
+		break;
+	case hast_client::CRASH:
+		std::cout << "Server crash" << std::endl;
+		break;
+	case hast_client::REPLY:
+		std::cout << "No reply" << std::endl;
+		break;
+	case hast_client::EPOLL:
+		std::cout << "epoll fail" << std::endl;
+		break;
+	case hast_client::FORMAT:
+		std::cout << "format" << std::endl;
+		break;
+	case hast_client::JOIN:
+		std::cout << "recv thread join" << std::endl;
+		break;
+	case hast_client::EPOLL_EV:
+		std::cout << "epoll event" << std::endl;
+		break;
+	case hast_client::SSL_r:
+		std::cout << "SSL_read fail" << std::endl;
+		break;
+	default:
+		std::cout << "flag doesn't exist" << std::endl;
+		break;
+		
+	}
+}
+
 std::string client_core::error_msg(const char flag, short int location_index, std::string msg){
+	echo_flag(flag);
 	if(error_socket_index==-1){
 		std::cout << "Client didn't set error node, so here are the error messages." << std::endl;
 		std::cout << "Flag: " << flag << std::endl;
@@ -97,6 +134,8 @@ inline bool client_core::build_on_i(short int i, short int location_index){
 		//tcp
 		std::string ip,port;
 		short int pos;
+		int result;
+		socklen_t result_len = sizeof(result);
 		ip = (*location)[location_index];
 		pos = ip.find(":");
 		if(pos==std::string::npos){
@@ -110,16 +149,38 @@ inline bool client_core::build_on_i(short int i, short int location_index){
 		}
 		for(; res != nullptr; res = res->ai_next) {
 			if ((socketfd[i] = socket(res->ai_family, res->ai_socktype,
-										 res->ai_protocol)) == -1) {
+									  res->ai_protocol)) == -1) {
 				continue;
 			}
+			if(fcntl(socketfd[i], F_SETFL, fcntl(socketfd[i], F_GETFL, 0) | O_NONBLOCK)==-1){
+				close_runner(i);
+				continue;
+			}
+			j = 1;
 			if (setsockopt(socketfd[i], SOL_SOCKET, SO_REUSEADDR, &j, sizeof(j)) == -1) {
 				close_runner(i);
 				continue;
 			}
 			if (connect(socketfd[i], res->ai_addr, res->ai_addrlen)<0) {
-				close_runner(i);
-				continue;
+				if(errno!=EINPROGRESS){
+					//std::cout << "error, fail somehow, close socket" << std::endl;
+					close_runner(i);
+					continue;
+				}
+				else{
+					//std::cout << "connection attempt is in progress" << std::endl;
+					if(getsockopt(socketfd[i], SOL_SOCKET, SO_ERROR, &result, &result_len) < 0){
+						//std::cout << "getsockopt fail somehow, close socket" << std::endl;
+						close_runner(i);
+						continue;
+					}
+					if(result!=0){
+						//std::cout << "connection failed; error code is in 'result'" << std::endl;
+						close_runner(i);
+						continue;
+					}
+					//std::cout << "connection attempt is finish" << std::endl;
+				}
 			}
 			break;
 		}
@@ -129,7 +190,8 @@ inline bool client_core::build_on_i(short int i, short int location_index){
 	}
 	else{
 		//unix
-		if (( socketfd[i] = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
+		if (( socketfd[i] = socket(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK, 0)) == -1) {
+		//if (( socketfd[i] = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
 			return false;
 		}
 		if (setsockopt(socketfd[i], SOL_SOCKET, SO_REUSEADDR, &j, sizeof(j)) == -1) {
@@ -278,22 +340,29 @@ char client_core::fire(short int &location_index,std::string &msg){
 
 inline char client_core::receive(short int runner_index,std::string &reply){
 	int len;
+	//std::cout << "recv" << std::endl;
 	for(;;){
 		len = epoll_wait(epollfd, events, MAX_EVENTS, wait_maximum);
+		//std::cout << "epoll len: " << len << std::endl;
 		if(len>0){
 			--len;
 			for(;len>=0;--len){
 				if(events[len].data.fd==socketfd[runner_index]){
 					if(events[len].events!=1){
+						//std::cout << "epoll event: " << events[len].events << std::endl;
 						return hast_client::EPOLL_EV;
 					}
 					break;
+				}
+				else{
+					//std::cout << "events fd: " << events[len].data.fd << std::endl;
 				}
 			}
 			if(len==-1){
 				continue;
 			}
 			else{
+				//std::cout << "read" << std::endl;
 				return read(runner_index,reply);
 			}
 		}
@@ -380,6 +449,7 @@ std::vector<std::string> client_core::get_error_flag(){
 			"Fail on epoll",
 			"Invalid message format",
 			"thread joinable is false (client_thread)",
-			"epoll events is not 1"};
+			"epoll events is not 1",
+			"SSL_read fail"};
 	return list;
 }

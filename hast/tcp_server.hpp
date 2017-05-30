@@ -9,7 +9,7 @@ tcp_server():
 	socket_server(){
 		reset_addr(hast::tcp_socket::SERVER);
 	}
-	bool init(hast::tcp_socket::port port, short int unsigned max = 0);
+	bool init(hast::tcp_socket::port port, short int unsigned max = 2);
 };
 
 #include <hast/tcp_server.cpp>
