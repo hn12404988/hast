@@ -55,6 +55,38 @@ bool client_thread::multi_con(short int &location_index, short int unsigned amou
 	return true;
 }
 
+inline short int client_thread::build_runner(short int location_index){
+	short int i;
+	i = amount-1;
+	for(;i>=0;--i){
+		if(socketfd[i]==-1){
+			if(build_on_i(i,location_index)==true){
+				location_list[i] = location_index;
+				return i;
+			}
+			else{
+				return -1;
+			}
+		}
+	}
+	i = amount - 1;
+	if(on_air==true){
+		for(;i>=0;--i){
+			if(waiting[i]==false){
+				close_runner(i);
+				return client_thread::build_runner(location_index);
+			}
+			if(i==0){
+				i = amount - 1;
+			}
+		}
+	}
+	else{
+		close_runner(i);
+		return client_thread::build_runner(location_index);
+	}
+}
+
 inline bool client_thread::recycle_thread(){
 	if(thread!=nullptr){
 		if(thread->joinable()==true){

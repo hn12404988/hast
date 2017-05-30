@@ -105,6 +105,97 @@ std::string client_core::reply_error_msg(short int location_index, std::string m
 	}
 }
 
+inline void client_core::close_runner(short int runner_index){
+	if(socketfd[runner_index]!=-1){
+		epoll_ctl(epollfd, EPOLL_CTL_DEL, socketfd[runner_index],nullptr);
+		shutdown(socketfd[runner_index],SHUT_RDWR);
+		close(socketfd[runner_index]);
+		socketfd[runner_index] = -1;
+	}
+	location_list[runner_index] = -1;
+}
+
+inline short int client_core::get_runner(short int location_index){
+	short int runner_index;
+	for(runner_index=0;runner_index<amount;++runner_index){
+		if(location_list[runner_index]==location_index){
+			runner_index = up(runner_index);
+			break;
+		}
+	}
+	if(runner_index==amount){
+		return -1;
+	}
+	else{
+		return runner_index;
+	}
+}
+
+char client_core::write(short int &runner_index, short int location_index, std::string &msg){
+	if( send(socketfd[runner_index] , msg.c_str() , msg.length() , 0) < 0){
+		close_runner(runner_index);
+		runner_index = get_runner(location_index);
+		if(runner_index==-1){
+			runner_index = build_runner(location_index);
+		}
+		if(runner_index==-1){
+			msg = error_msg(hast_client::EXIST,location_index,msg);
+			error_fire(msg);
+			msg.clear();
+			return hast_client::EXIST;
+		}
+		if( send(socketfd[runner_index] , msg.c_str() , msg.length() , 0) < 0){
+			close_runner(runner_index);
+			runner_index = -1;
+			msg = error_msg(hast_client::SEND,location_index,msg);
+			error_fire(msg);
+			msg.clear();
+			return hast_client::SEND;
+		}
+	}
+	return hast_client::SUCCESS;
+}
+
+char client_core::read(short int runner_index, std::string &reply_str){
+	reply_str.clear();
+	int len;
+	char reply[transport_size];
+	for(;;){
+		len = recv(socketfd[runner_index], reply, transport_size, MSG_DONTWAIT);
+		if(len>0){
+			reply_str.append(reply,len);
+		}
+		else if(len==0){
+			reply_str.clear();
+			return hast_client::CRASH;
+		}
+		else{
+			return hast_client::SUCCESS;
+		}
+	}
+}
+
+inline short int client_core::build_runner(short int location_index){
+	short int runner_index;
+	runner_index = amount-1;
+	for(;runner_index>=0;--runner_index){
+		if(socketfd[runner_index]==-1){
+			if(build_on_i(runner_index,location_index)==true){
+				location_list[runner_index] = location_index;
+				return runner_index;
+			}
+			else{
+				return -1;
+			}
+		}
+	}
+	if(runner_index==-1){
+		runner_index = amount - 1;
+		close_runner(runner_index);
+		return build_runner(location_index);
+	}
+}
+
 void client_core::import_location(std::vector<std::string> *location, short int unsigned amount){
 	short int a;
 	if(location!=nullptr){

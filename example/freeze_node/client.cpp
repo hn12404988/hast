@@ -1,17 +1,18 @@
 #include <iostream>
 #include <chrono>
 #include <thread>
-#include <hast/client_thread.hpp>
+#include <hast/client_thread_tls.hpp>
+#include <hast/client_core_tls.hpp>
 
 int main(){
 	std::string msg,msg2;
-	client_core c1;
-	client_thread c2;
+	client_core_tls c1;
+	client_thread_tls c2;
 	short int to_s1 {0};
 	char error_flag;
 	c2.set_wait_maximum(10);
 	std::vector<std::string> location;
-	location.push_back("172.18.0.3:8888");
+	location.push_back("TLS:172.18.0.3:8888");
 	c1.import_location(&location);
 	c2.import_location(&location,2);
 	msg = "freeze"; // change to (msg = '!') will freeze all thread in server

@@ -31,8 +31,8 @@ namespace hast{
 		std::string shutdown_code {""};
 		bool byebye {false};
 
+		virtual void close_socket(const int socket_index);
 		void pending_first();
-		void close_socket(const int socket_index);
 		inline void recv_epoll();
 	
 	public:
@@ -46,14 +46,13 @@ namespace hast{
 		void set_topology_wait(short int unsigned time);
 		void done(const short int thread_index);
 		void close_socket(const short int thread_index);
-		int get_socket(short int thread_index);
+		inline void check_in(const short int thread_index, std::string &msg);
+		inline void check_out(const short int thread_index);
 		inline void echo_back_msg(const short int thread_index, const char* msg);
 		inline void echo_back_msg(const short int thread_index, std::string &msg);
 		inline void echo_back_error(const short int thread_index, std::string msg);
 		inline void echo_back_sql_error(const short int thread_index);
 		inline void echo_back_result(const short int thread_index, bool error);
-		inline void check_in(const short int thread_index, std::string &msg);
-		inline void check_out(const short int thread_index);
 	};
 };
 #include <hast/socket_server.cpp>

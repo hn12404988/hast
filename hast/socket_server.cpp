@@ -126,12 +126,7 @@ namespace hast{
 			for(;a>=0;--a){
 				c = events[a].data.fd;
 				if(events[a].events!=1){
-					epoll_ctl(epollfd, EPOLL_CTL_DEL, c,nullptr);
-					shutdown(c,SHUT_RDWR);
-					close(c);
-					if(on_close!=nullptr){
-						on_close(c);
-					}
+					close_socket(c);
 					continue;
 				}
 				b = get_thread();
@@ -222,11 +217,15 @@ namespace hast{
 					if(l>0){
 						raw_msg[thread_index].append(new_char,l);
 					}
+					else if(l==0){
+						break;
+					}
 					else{
+						l = 1;
 						break;
 					}
 				}
-				if(raw_msg[thread_index]==""){
+				if(l==0){
 					//client close connection.
 					close_socket(socketfd[thread_index]);
 					continue;
@@ -514,10 +513,6 @@ namespace hast{
 		close_socket(socketfd[thread_index]);
 	}
 	
-	int socket_server::get_socket(short int thread_index){
-		return socketfd[thread_index];
-	}
-
 	void socket_server::start_accept(){
 		int new_socket {1};
 		while(new_socket>=0){
