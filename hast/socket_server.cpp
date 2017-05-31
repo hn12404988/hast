@@ -126,7 +126,7 @@ namespace hast{
 			for(;a>=0;--a){
 				c = events[a].data.fd;
 				if(events[a].events!=1){
-					close_socket(c);
+					close_socket(c,__LINE__);
 					continue;
 				}
 				b = get_thread();
@@ -227,7 +227,7 @@ namespace hast{
 				}
 				if(l==0){
 					//client close connection.
-					close_socket(socketfd[thread_index]);
+					close_socket(socketfd[thread_index],__LINE__);
 					continue;
 				}
 				if(call_shutdown==true){
@@ -249,7 +249,8 @@ namespace hast{
 						/**
 						 * `uncheck` signal
 						 **/
-						if(section_check_fd==socketfd[thread_index]){
+						//if(section_check_fd==socketfd[thread_index]){
+						if(section_check_fd>=0){
 							section_check_fd = -1;
 							check_str = "<>";
 							send(socketfd[thread_index], "1", 1,0);
@@ -284,7 +285,7 @@ namespace hast{
 									//Need lock thread to deal with this msg, so pending this signal
 									pending_fd.push_back(socketfd[thread_index]);
 									pending_msg.push_back(raw_msg[thread_index]);
-									socketfd[thread_index] = -1; //Don't open epoll
+									//socketfd[thread_index] = -1; //Don't open epoll
 									++pending_amount;
 									//TODO echo back how long should that client wait.
 									continue;
@@ -294,7 +295,7 @@ namespace hast{
 								//There is a signal is `section-checking`, so pending this signal.
 								pending_fd.push_back(socketfd[thread_index]);
 								pending_msg.push_back(raw_msg[thread_index]);
-								socketfd[thread_index] = -1; //Don't open epoll
+								//socketfd[thread_index] = -1; //Don't open epoll
 								++pending_amount;
 								//TODO echo back how long should that client wait.
 								continue;
@@ -324,7 +325,8 @@ namespace hast{
 						/**
 						 * This is a `unfreeze` signal.
 						 **/
-						if(msg_freeze_fd==socketfd[thread_index]){
+						//if(msg_freeze_fd==socketfd[thread_index]){
+						if(msg_freeze_fd>=0){
 							msg_freeze_fd = -1;
 							freeze_str = "!";
 							send(socketfd[thread_index], "1", 1,0);
@@ -357,7 +359,7 @@ namespace hast{
 									//Need lock thread to deal with this msg, so pending this signal.
 									pending_fd.push_back(socketfd[thread_index]);
 									pending_msg.push_back(raw_msg[thread_index]);
-									socketfd[thread_index] = -1; //Don't open epoll
+									//socketfd[thread_index] = -1; //Don't open epoll
 									++pending_amount;
 									//TODO echo back how long should that client wait.
 									//pending first
@@ -368,7 +370,7 @@ namespace hast{
 								//There is a signal is in `freeze`, so pending this signal.
 								pending_fd.push_back(socketfd[thread_index]);
 								pending_msg.push_back(raw_msg[thread_index]);
-								socketfd[thread_index] = -1; //Don't open epoll
+								//socketfd[thread_index] = -1; //Don't open epoll
 								++pending_amount;
 								//TODO echo back how long should that client wait.
 								continue;
@@ -413,7 +415,7 @@ namespace hast{
 						if(msg_freeze_id==thread_index){
 							pending_fd.push_back(socketfd[thread_index]);
 							pending_msg.push_back(raw_msg[thread_index]);
-							socketfd[thread_index] = -1; //Don't open epoll
+							//socketfd[thread_index] = -1; //Don't open epoll
 							++pending_amount;
 							continue;
 						}
@@ -439,7 +441,7 @@ namespace hast{
 						if(raw_msg[thread_index]==freeze_str){
 							pending_fd.push_back(socketfd[thread_index]);
 							pending_msg.push_back(raw_msg[thread_index]);
-							socketfd[thread_index] = -1; //Don't open epoll
+							//socketfd[thread_index] = -1; //Don't open epoll
 							++pending_amount;
 							continue;
 						}
@@ -458,10 +460,11 @@ namespace hast{
 		}
 	}
 
-	void socket_server::close_socket(const int socket_index){
+	void socket_server::close_socket(const int socket_index, int line){
 		if(socket_index<0){
 			return;
 		}
+		std::cout << "close fd: " << socket_index << " by line: " << line << std::endl;
 		short int a;
 		shutdown(socket_index,SHUT_RDWR);
 		close(socket_index);
@@ -509,7 +512,7 @@ namespace hast{
 	}
 
 	void socket_server::close_socket(const short int thread_index){
-		close_socket(socketfd[thread_index]);
+		close_socket(socketfd[thread_index],__LINE__);
 	}
 	
 	void socket_server::start_accept(){

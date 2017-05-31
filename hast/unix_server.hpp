@@ -8,8 +8,6 @@ class unix_server : public hast::socket_server{
 private:
 	struct sockaddr_un addr;
 public:
-unix_server():
-	socket_server(){}
 	bool init(const char *file,short int unsigned max = 2);
 };
 

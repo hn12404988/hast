@@ -5,8 +5,8 @@
 
 class tcp_server : public tcp_config , public hast::socket_server{
 public:
-tcp_server():
-	socket_server(){
+	tcp_server():
+		socket_server(){
 		reset_addr(hast::tcp_socket::SERVER);
 	}
 	bool init(hast::tcp_socket::port port, short int unsigned max = 2);

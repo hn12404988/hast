@@ -372,11 +372,12 @@ char client_core::fire_return(short int &location_index,std::string &msg, short 
 				error_fire(msg);
 				msg = reply; //Do this in dev mode.
 				//msg = "0"; Don't show error msg to client. Do this while on production.
+				return hast_client::REPLY_ERR;
 			}
 			else{
 				msg = reply;
+				return hast_client::SUCCESS;
 			}
-			return hast_client::SUCCESS;
 		}
 	}
 }
@@ -425,11 +426,12 @@ char client_core::fire(short int &location_index,std::string &msg){
 				error_fire(msg);
 				msg = reply; //Do this in dev mode.
 				//msg = "0"; Don't show error msg to client. Do this while on production.
+				return hast_client::REPLY_ERR;
 			}
 			else{
 				msg = reply;
+				return hast_client::SUCCESS;
 			}
-			return hast_client::SUCCESS;
 		}
 	}
 }

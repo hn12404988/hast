@@ -31,7 +31,7 @@ namespace hast{
 		std::string shutdown_code {""};
 		bool byebye {false};
 
-		virtual void close_socket(const int socket_index);
+		virtual void close_socket(const int socket_index, int line = 0);
 		void pending_first();
 		inline void recv_epoll();
 	
@@ -40,19 +40,19 @@ namespace hast{
 		socket_server();
 		~socket_server();
 		bool call_shutdown {false};
-		bool msg_recv(const short int thread_index);
-		void start_accept();
+		virtual bool msg_recv(const short int thread_index);
+		virtual void start_accept();
 		void set_shutdown_code(std::string code);
 		void set_topology_wait(short int unsigned time);
 		void done(const short int thread_index);
 		void close_socket(const short int thread_index);
 		inline void check_in(const short int thread_index, std::string &msg);
 		inline void check_out(const short int thread_index);
-		inline void echo_back_msg(const short int thread_index, const char* msg);
-		inline void echo_back_msg(const short int thread_index, std::string &msg);
-		inline void echo_back_error(const short int thread_index, std::string msg);
-		inline void echo_back_sql_error(const short int thread_index);
-		inline void echo_back_result(const short int thread_index, bool error);
+		virtual inline void echo_back_msg(const short int thread_index, const char* msg);
+		virtual inline void echo_back_msg(const short int thread_index, std::string &msg);
+		virtual inline void echo_back_error(const short int thread_index, std::string msg);
+		virtual inline void echo_back_sql_error(const short int thread_index);
+		virtual inline void echo_back_result(const short int thread_index, bool error);
 	};
 };
 #include <hast/socket_server.cpp>

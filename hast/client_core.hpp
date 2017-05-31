@@ -29,6 +29,7 @@
  * 7: thread joinable is false (client_thread).
  * 8: epoll events is not 1.
  * 9: SSL_READ fail.
+ * 10: Reply Error
  *************************************************************/
 
 namespace hast_client{
@@ -42,6 +43,7 @@ namespace hast_client{
 	const char JOIN {7};
 	const char EPOLL_EV {8};
 	const char SSL_r {9};
+	const char REPLY_ERR {10};
 };
 #define MAX_EVENTS 5
 

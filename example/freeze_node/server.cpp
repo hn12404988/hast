@@ -18,7 +18,11 @@ auto execute = [&](const short int index){
 int main(){
 	server.execute = execute;
 	server.msg_freeze = true;
+	//server.set_topology_wait(1);
+	//server.call_shutdown = true;
+	//server.set_shutdown_code("bye");
 	if(server.init("/home/tls/server_2/server.crt","/home/tls/server_2/server.key","8889")==false){
+	//if(server.init("8889")==false){
 		std::cout << "Server can't init at file: " << __FILE__ << std::endl;
 	}
 	else{

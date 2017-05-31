@@ -1,28 +1,16 @@
 #ifndef hast_tcp_server_tls_hpp
 #define hast_tcp_server_tls_hpp
 
-#include <hast/tcp_server.hpp>
-#include <openssl/ssl.h>
-#include <openssl/err.h>
+#include <hast/tcp_config.hpp>
+#include <hast/tls_server.hpp>
 
-class tcp_server_tls : public tcp_server{
-protected:
-	SSL_CTX *ctx {nullptr};
-	std::map<int,SSL*> ssl_map;
-	SSL **ssl {nullptr};
-	std::mutex ssl_mx;
-	void close_socket(const int socket_index) override;
-	void reset_accept(int socket_index,SSL *ssl);
+class tcp_server_tls : public tcp_config , public tls_server{
 public:
-	~tcp_server_tls();
+	tcp_server_tls():
+		tls_server(){
+		reset_addr(hast::tcp_socket::SERVER);
+	}
 	bool init(const char* crt, const char* key, hast::tcp_socket::port port,short int unsigned max = 2);
-	void start_accept();
-	bool msg_recv(const short int thread_index);
-	inline void echo_back_msg(const short int thread_index, std::string &msg);
-	inline void echo_back_msg(const short int thread_index, const char* msg);
-	inline void echo_back_error(const short int thread_index, std::string msg);
-	inline void echo_back_sql_error(const short int thread_index);
-	inline void echo_back_result(const short int thread_index, bool error);
 };
 
 #include <hast/tcp_server_tls.cpp>
