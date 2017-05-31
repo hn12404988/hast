@@ -1,6 +1,6 @@
 # hast
 
-Server and client libraries for socket communication with topology features in linux, supporting TCP/IP and Unix Domain socket. Features are handling requests in parallel and tiny enough to be embeded in program. 
+Server and client libraries for socket communication with topology features in linux, supporting TCP/IP and Unix Domain socket, and TLS. Features are handling requests in parallel and tiny enough to be embeded in program. 
 
 * [中文簡介](https://github.com/hn12404988/hast/blob/master/README_Chinese.md)
 
@@ -24,6 +24,12 @@ Server and client libraries for socket communication with topology features in l
 
 ## Getting Started
 
+* If you want to use this library under TLS (openssl), you will need `openssl-devel`.
+```
+yum install openssl-devel
+apt-get install libssl-dev
+g++ -lssl -lcrypto ...
+```
 * Only for Linux (kernel > 2.5.44 because using `epoll.h`). 
 * `gcc` > 4.9, due to this [bug](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=54562)
 * Header-only library, so copy `hast` folder to your include folder.

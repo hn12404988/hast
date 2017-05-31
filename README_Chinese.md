@@ -1,6 +1,6 @@
 # hast
 
-在Linux平台上的socket溝通套件，並針對[網路拓樸](https://zh.wikipedia.org/wiki/%E7%BD%91%E7%BB%9C%E6%8B%93%E6%89%91)特別設計，支援TCP/IP和unix domain socket，特色是平行處理和容易使用
+在Linux平台上的socket溝通套件，並針對[網路拓樸](https://zh.wikipedia.org/wiki/%E7%BD%91%E7%BB%9C%E6%8B%93%E6%89%91)特別設計，支援TCP/IP, unix domain socket和TLS，特色是平行處理和容易使用
 
 ## 介紹影片
 
@@ -22,6 +22,12 @@
 
 ## 開始使用
 
+* 如果你想用TLS(openssl)傳輸，需要安裝`openssl-devel`
+```
+yum install openssl-devel
+apt-get install libssl-dev
+g++ -lssl -lcrypto ...
+```
 * 只適用於Linux平台，kernel > 2.5.44（因為使用到epoll.h）
 * `gcc` > 4.9, 因為這個[bug](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=54562)
 * 沒有其他依附套件，只需把`hast`資料夾複製到系統的`include`資料夾裡即可
