@@ -2,7 +2,6 @@
 #define hast_tcp_server_tls_hpp
 
 #include <hast/tcp_server.hpp>
-#include <sys/poll.h>
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 
@@ -14,7 +13,6 @@ protected:
 	std::mutex ssl_mx;
 	void close_socket(const int socket_index) override;
 	void reset_accept(int socket_index,SSL *ssl);
-	bool single_poll(const int socket_index, const short int time);
 public:
 	~tcp_server_tls();
 	bool init(const char* crt, const char* key, hast::tcp_socket::port port,short int unsigned max = 2);

@@ -1,3 +1,10 @@
+tcp_config::~tcp_config(){
+	if(res!=nullptr){
+		freeaddrinfo(res);
+		res = nullptr;
+	}
+}
+
 inline void tcp_config::reset_addr(bool server_or_client){
 	memset(&hints, 0, sizeof(hints));
 	if(res!=nullptr){

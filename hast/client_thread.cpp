@@ -251,14 +251,14 @@ void client_thread::recv_epoll_thread(){
 							waiting[m] = false;
 							wait_history[m] = false;
 							store_reply[m] = nullptr;
-							m = -1;
+							m = amount;
 							break;
 						}
 						a = read(m,tmp_str);
 						break;
 					}
 				}
-				if(m==-1){
+				if(m==amount){
 					continue;
 				}
 				if(a!=hast_client::SUCCESS){

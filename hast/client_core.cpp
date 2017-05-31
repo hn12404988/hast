@@ -52,6 +52,9 @@ void client_core::echo_flag(const char flag){
 
 std::string client_core::error_msg(const char flag, short int location_index, std::string msg){
 	echo_flag(flag);
+	std::cout << flag << std::endl;
+	std::cout << location_index << std::endl;
+	std::cout << msg << std::endl;
 	if(error_socket_index==-1){
 		std::cout << "Client didn't set error node, so here are the error messages." << std::endl;
 		std::cout << "Flag: " << flag << std::endl;
@@ -305,13 +308,15 @@ inline bool client_core::build_on_i(short int i, short int location_index){
 }
 
 char client_core::shutdown_server(short int &location_index,std::string &shutdown_code){
-	short int runner_bk;
 	char a;
-	a = fire_return(location_index,shutdown_code,runner_bk);
+	a = fire(location_index,shutdown_code);
 	if(a==hast_client::SUCCESS){
-		close_runner(runner_bk);
-		shutdown_code = "shutdown";
-		return fire(location_index,shutdown_code);
+		shutdown_code = "1";
+		client_core c;
+		c.import_location(location);
+		a = c.fire(location_index,shutdown_code);
+		
+		return a;
 	}
 	else{
 		return a;

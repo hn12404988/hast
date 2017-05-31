@@ -234,7 +234,6 @@ namespace hast{
 					if(raw_msg[thread_index]==shutdown_code){
 						byebye = true;
 						send(socketfd[thread_index], "1", 1,0);
-						close_socket(socketfd[thread_index]);
 						continue;
 					}
 				}
@@ -519,6 +518,7 @@ namespace hast{
 			new_socket = accept4(host_socket, (struct sockaddr *)&client_addr, &client_addr_size,SOCK_NONBLOCK);
 			if(new_socket>0){
 				if(byebye==true){
+					send(new_socket,"1",1,0);
 					break;
 				}
 				ev.data.fd = new_socket;

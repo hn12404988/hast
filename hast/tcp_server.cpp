@@ -25,10 +25,11 @@ bool tcp_server::init(hast::tcp_socket::port port, short int unsigned max){
 		}
 		break;
 	}
+	freeaddrinfo(res);
+	res = nullptr;
 	if(p==NULL){
 		return false;
 	}
-	freeaddrinfo(res); 
     if(listen(host_socket,listen_pending)==0){
 		return true;
 	}

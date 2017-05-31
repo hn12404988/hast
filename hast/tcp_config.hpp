@@ -36,12 +36,8 @@ private:
 protected:
 	struct addrinfo hints, *res{nullptr};
 	inline void reset_addr(bool server_or_client);
-	~tcp_config(){
-		if(res!=nullptr){
-			freeaddrinfo(res);
-			res = nullptr;
-		}
-	}
+	~tcp_config();
 };
+
 #include<hast/tcp_config.cpp>
 #endif /* hast_tcp_config_hpp */

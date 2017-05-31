@@ -33,6 +33,7 @@ client_thread_tls::~client_thread_tls(){
 }
 
 bool client_thread_tls::TLS_init(){
+	const SSL_METHOD *method; //nullptr?
 	/* ---------------------------------------------------------- *
 	 * These function calls initialize openssl for correct work.  *
 	 * ---------------------------------------------------------- */
@@ -115,7 +116,7 @@ inline short int client_thread_tls::build_runner(short int location_index){
 			}
 			else if(err==0){
 				//std::cout << "SSL_connect fail 0" << std::endl;
-				client_thread_tls::close_runner(runner_index);
+				close_runner(runner_index);
 				ssl_mx.unlock();
 				return -1;
 			}
@@ -127,7 +128,7 @@ inline short int client_thread_tls::build_runner(short int location_index){
 				}
 				else{
 					//std::cout << "SSL_connect fail err" << std::endl;
-					client_thread_tls::close_runner(runner_index);
+					close_runner(runner_index);
 					ssl_mx.unlock();
 					return -1;
 				}
@@ -155,10 +156,10 @@ char client_thread_tls::write(short int &runner_index, short int location_index,
 	else{
 		ssl_mx.lock();
 		if( SSL_write(ssl[runner_index], msg.c_str(), msg.length()) <= 0){
-			client_thread_tls::close_runner(runner_index);
+			close_runner(runner_index);
 			runner_index = get_runner(location_index);
 			if(runner_index==-1){
-				runner_index = client_thread_tls::build_runner(location_index);
+				runner_index = build_runner(location_index);
 			}
 			if(runner_index==-1){
 				msg = error_msg(hast_client::EXIST,location_index,msg);

@@ -14,6 +14,10 @@ tcp_server_tls::~tcp_server_tls(){
 		SSL_CTX_free(ctx);
 		ctx = nullptr;
 	}
+	if(ssl!=nullptr){
+		delete [] ssl;
+		ssl = nullptr;
+	}
 	//CONF_modules_unload(1);
 	//CONF_modules_free();
 	//ENGINE_cleanup();
@@ -63,16 +67,6 @@ void tcp_server_tls::reset_accept(int socket_index,SSL *ssl){
 	SSL_free(ssl);
 }
 
-bool tcp_server_tls::single_poll(const int socket_index, const short int time){
-	struct pollfd ufds;
-	ufds.events = POLLIN;
-	ufds.fd = socket_index;
-	if(poll(&ufds,1,time)<=0 || (ufds.revents & POLLIN)==false){
-		return false;
-	}
-	return true;
-}
-
 void tcp_server_tls::close_socket(const int socket_index){
 	socket_server::close_socket(socket_index);
 	SSL *tmp_ptr {nullptr};
@@ -89,31 +83,29 @@ void tcp_server_tls::start_accept(){
 	if(execute==nullptr || ctx==nullptr){
 		return;
 	}
-	SSL *ssl {SSL_new(ctx)};
-	int l;
-	char new_char[transport_size];
-	std::string msg;
+	SSL *ssl_ptr {SSL_new(ctx)};
+	int l,loop;
 	int new_socket {1};
 	while(new_socket>=0){
 		new_socket = accept4(host_socket, (struct sockaddr *)&client_addr, &client_addr_size, SOCK_NONBLOCK);
 		if(new_socket>0){
-			msg.clear();
-			if(single_poll(new_socket,3000)==false){
-				shutdown(new_socket,SHUT_RDWR);
-				close(new_socket);
-				continue;
+			//std::cout << "new socket: " << new_socket << std::endl;
+			if(ssl_ptr==nullptr){
+				ssl_ptr = SSL_new(ctx);
 			}
-			if(ssl==nullptr){
-				ssl = SSL_new(ctx);
-			}
-			l = SSL_set_fd(ssl, new_socket);
+			l = SSL_set_fd(ssl_ptr, new_socket);
+			loop = 0;
 			for(;;){
-				l = SSL_accept(ssl);
+				l = SSL_accept(ssl_ptr);
 				if (l <= 0) {
-					l = SSL_get_error(ssl,l);
+					l = SSL_get_error(ssl_ptr,l);
 					if (l == SSL_ERROR_WANT_READ){
 						//std::cout << "Wait for data to be read" << l << std::endl;
-						continue;
+						++loop;
+						if(loop<10000){
+							continue;
+						}
+						std::cout << "error read loop" << std::endl;
 					}
 					else if (l == SSL_ERROR_WANT_WRITE){
 						//std::cout << "Write data to continue" << l << std::endl;
@@ -128,8 +120,8 @@ void tcp_server_tls::start_accept(){
 						//std::cout << "Same as error" << l << std::endl;
 					}
 					//ERR_print_errors_fp(stderr);
-					reset_accept(new_socket,ssl);
-					ssl = nullptr;
+					reset_accept(new_socket,ssl_ptr);
+					ssl_ptr = nullptr;
 					l = -1;
 					break;
 				}
@@ -138,37 +130,51 @@ void tcp_server_tls::start_accept(){
 				}
 			}
 			if(l==-1){
-				continue;
+				if(byebye==true){
+					break;
+				}
+				else{
+					continue;
+				}
 			}
+			if(byebye==true){
+				ssl_mx.lock();
+				SSL_write(ssl_ptr,"1",1);
+				ssl_mx.unlock();
+				break;
+			}
+			//std::cout << "SSL_accept OK" << std::endl;
 			if(ssl_map[new_socket]!=nullptr){
-				reset_accept(new_socket,ssl);
-				ssl = nullptr;
+				reset_accept(new_socket,ssl_ptr);
+				ssl_ptr = nullptr;
 				ssl_map[new_socket] = nullptr;
 				continue;
 			}
 			else{
-				ssl_map[new_socket] = ssl;
+				ssl_map[new_socket] = ssl_ptr;
 			}
 			ev.data.fd = new_socket;
 			if(epoll_ctl(epollfd, EPOLL_CTL_ADD, new_socket,&ev)==-1){
-				reset_accept(new_socket,ssl);
-				ssl = nullptr;
+				reset_accept(new_socket,ssl_ptr);
+				ssl_ptr = nullptr;
 				ssl_map[new_socket] = nullptr;
 				continue;
 			}
-			ssl = nullptr;
+			ssl_ptr = nullptr;
 			if(recv_thread==-1){
 				add_thread();
 			}
+			//std::cout << "accept OK" << std::endl;
 		}
 	}
-	if(ssl!=nullptr){
-		SSL_free(ssl);
-		ssl = nullptr;
+	if(ssl_ptr!=nullptr){
+		SSL_free(ssl_ptr);
+		ssl_ptr = nullptr;
 	}
 }
 
 bool tcp_server_tls::msg_recv(const short int thread_index){
+	//std::cout << "msg_recv start: " << thread_index << std::endl;
 	for(;;){
 		if(section_check==true){
 			check_entry[thread_index] = false;
@@ -184,9 +190,12 @@ bool tcp_server_tls::msg_recv(const short int thread_index){
 		if(byebye==false && recv_thread==-1){
 			recv_thread = thread_index;
 			thread_mx.unlock();
+			//std::cout << "recv: " << thread_index << std::endl;
 			recv_epoll();
+			//std::cout << "recv over: " << thread_index << std::endl;
 		}
 		else{
+			//std::cout << "not recv: " << thread_index << std::endl;
 			thread_mx.unlock();
 		}
 		for(;;){
@@ -237,6 +246,7 @@ bool tcp_server_tls::msg_recv(const short int thread_index){
 				}
 				else{
 					l = 1;
+					break;
 				}
 			}
 			ssl_mx.unlock();
@@ -251,7 +261,6 @@ bool tcp_server_tls::msg_recv(const short int thread_index){
 					ssl_mx.lock();
 					SSL_write(ssl[thread_index],"1",1);
 					ssl_mx.unlock();
-					close_socket(socketfd[thread_index]);
 					continue;
 				}
 			}

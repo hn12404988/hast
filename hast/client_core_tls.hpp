@@ -2,7 +2,6 @@
 #define hast_client_core_tls_hpp
 
 #include <hast/client_core.hpp>
-#include <mutex>
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 
@@ -15,7 +14,6 @@ protected:
 	SSL_CTX *ctx {nullptr};
 	bool *TLS {nullptr}; // Record which server is transported under TLS in location.
 	SSL **ssl {nullptr}; // runner list with TLS
-	std::mutex ssl_mx;
 	bool TLS_init();
 	inline short int build_runner(short int location_index) override;
 	inline void close_runner(short int runner_index) override;
