@@ -64,14 +64,13 @@ protected:
 	virtual inline void close_runner(short int runner_index);
 	virtual inline short int build_runner(short int location_index);
 	virtual inline short int get_runner(short int location_index);
-	virtual char write(short int &runner_index, short int location_index, std::string &msg);
-	virtual char read(short int runner_index, std::string &reply_str);
+	virtual inline char write(short int &runner_index, short int location_index, std::string &msg);
+	virtual inline char read(short int runner_index, std::string &reply_str);
 	inline bool build_on_i(short int i, short int location_index);
 	inline char receive(short int runner_index,std::string &reply);
 	std::string error_msg(const char flag, short int index, std::string msg);
 	std::string reply_error_msg(short int index, std::string msg, std::string reply);
 	inline void error_fire(std::string msg);
-	inline short int up(short int runner_index);
 	void echo_flag(const char flag);
 	char fire_return(short int &location_index,std::string &msg, short int &runner_bk);
 public:

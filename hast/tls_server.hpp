@@ -12,16 +12,16 @@ protected:
 	SSL **ssl {nullptr};
 	std::mutex ssl_mx;
 	void close_socket(const int socket_index, int line = 0) override;
+	void pending_first() override;
+	inline bool read(short int thread_index) override;
+	inline bool write(short int thread_index, std::string &msg) override;
+	inline bool write(short int thread_index, const char* msg) override;
+	inline void recv_epoll() override;
+	inline bool write(SSL* ssl, const char* cmsg);
 	void reset_accept(int socket_index,SSL *ssl);
 public:
 	~tls_server();
 	void start_accept() override;
-	bool msg_recv(const short int thread_index) override;
-	inline void echo_back_msg(const short int thread_index, std::string &msg) override;
-	inline void echo_back_msg(const short int thread_index, const char* msg) override;
-	inline void echo_back_error(const short int thread_index, std::string msg) override;
-	inline void echo_back_sql_error(const short int thread_index) override;
-	inline void echo_back_result(const short int thread_index, bool error) override;
 };
 
 #include <hast/tls_server.cpp>

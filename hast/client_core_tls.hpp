@@ -17,8 +17,8 @@ protected:
 	bool TLS_init();
 	inline short int build_runner(short int location_index) override;
 	inline void close_runner(short int runner_index) override;
-	char write(short int &runner_index, short int location_index, std::string &msg) override;
-	char read(short int runner_index, std::string &reply_str) override;
+	inline char write(short int &runner_index, short int location_index, std::string &msg) override;
+	inline char read(short int runner_index, std::string &reply_str) override;
 public:
 	client_core_tls();
 	~client_core_tls();

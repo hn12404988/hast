@@ -36,7 +36,7 @@ int main(){
 	else{
 		std::cout << "c2 fail on fireNstore 'normal msg'" << std::endl;
 	}
-	std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+	std::this_thread::sleep_for(std::chrono::milliseconds(3000));
 	if(c2.unfreeze(to_s1)==0){
 		std::cout << "c2 unfreeze server successfully" << std::endl;
 	}

@@ -43,6 +43,9 @@ void client_core::echo_flag(const char flag){
 	case hast_client::SSL_r:
 		std::cout << "SSL_read fail" << std::endl;
 		break;
+	case hast_client::REPLY_ERR:
+		std::cout << "Error Reply" << std::endl;
+		break;
 	default:
 		std::cout << "flag doesn't exist" << std::endl;
 		break;
@@ -52,9 +55,6 @@ void client_core::echo_flag(const char flag){
 
 std::string client_core::error_msg(const char flag, short int location_index, std::string msg){
 	echo_flag(flag);
-	std::cout << flag << std::endl;
-	std::cout << location_index << std::endl;
-	std::cout << msg << std::endl;
 	if(error_socket_index==-1){
 		std::cout << "Client didn't set error node, so here are the error messages." << std::endl;
 		std::cout << "Flag: " << flag << std::endl;
@@ -122,7 +122,6 @@ inline short int client_core::get_runner(short int location_index){
 	short int runner_index;
 	for(runner_index=0;runner_index<amount;++runner_index){
 		if(location_list[runner_index]==location_index){
-			runner_index = up(runner_index);
 			break;
 		}
 	}
@@ -134,37 +133,58 @@ inline short int client_core::get_runner(short int location_index){
 	}
 }
 
-char client_core::write(short int &runner_index, short int location_index, std::string &msg){
-	if( send(socketfd[runner_index] , msg.c_str() , msg.length() , 0) < 0){
-		close_runner(runner_index);
-		runner_index = get_runner(location_index);
-		if(runner_index==-1){
-			runner_index = build_runner(location_index);
+inline char client_core::write(short int &runner_index, short int location_index, std::string &msg){
+	int flag,len {msg.length()};
+	bool retry {false};
+	const char* i {msg.c_str()};
+	for(;;){
+		flag = send(socketfd[runner_index] , i , len , 0);
+		if(flag==-1){
+			if(errno==EAGAIN || errno==EWOULDBLOCK){
+				continue;
+			}
+			else{
+				if(retry==true){
+					close_runner(runner_index);
+					msg = error_msg(hast_client::SEND,location_index,msg);
+					error_fire(msg);
+					msg.clear();
+					return hast_client::SEND;
+				}
+				retry = true;
+				close_runner(runner_index);
+				runner_index = get_runner(location_index);
+				if(runner_index==-1){
+					runner_index = build_runner(location_index);
+				}
+				if(runner_index==-1){
+					msg = error_msg(hast_client::EXIST,location_index,msg);
+					error_fire(msg);
+					msg.clear();
+					return hast_client::EXIST;
+				}
+			}
 		}
-		if(runner_index==-1){
-			msg = error_msg(hast_client::EXIST,location_index,msg);
-			error_fire(msg);
-			msg.clear();
-			return hast_client::EXIST;
-		}
-		if( send(socketfd[runner_index] , msg.c_str() , msg.length() , 0) < 0){
-			close_runner(runner_index);
-			runner_index = -1;
-			msg = error_msg(hast_client::SEND,location_index,msg);
-			error_fire(msg);
-			msg.clear();
-			return hast_client::SEND;
+		else{
+			if(flag==len){
+				break;
+			}
+			else{
+				msg = msg.substr(flag);
+				i = msg.c_str();
+				len = msg.length();
+			}
 		}
 	}
 	return hast_client::SUCCESS;
 }
 
-char client_core::read(short int runner_index, std::string &reply_str){
+inline char client_core::read(short int runner_index, std::string &reply_str){
 	reply_str.clear();
 	int len;
 	char reply[transport_size];
 	for(;;){
-		len = recv(socketfd[runner_index], reply, transport_size, MSG_DONTWAIT);
+		len = recv(socketfd[runner_index], reply, transport_size, 0);
 		if(len>0){
 			reply_str.append(reply,len);
 		}
@@ -173,7 +193,13 @@ char client_core::read(short int runner_index, std::string &reply_str){
 			return hast_client::CRASH;
 		}
 		else{
-			return hast_client::SUCCESS;
+			if(errno==EAGAIN || errno==EWOULDBLOCK){
+				return hast_client::SUCCESS;
+			}
+			else{
+				reply_str.clear();
+				return hast_client::CRASH;
+			}
 		}
 	}
 }
@@ -224,12 +250,12 @@ void client_core::import_location(std::vector<std::string> *location, short int 
 
 inline bool client_core::build_on_i(short int i, short int location_index){
 	int j {1};
+	int result;
+	socklen_t result_len = sizeof(result);
 	if((*location)[location_index].find(":")!=std::string::npos){
 		//tcp
 		std::string ip,port;
 		short int pos;
-		int result;
-		socklen_t result_len = sizeof(result);
 		ip = (*location)[location_index];
 		pos = ip.find(":");
 		if(pos==std::string::npos){
@@ -285,7 +311,6 @@ inline bool client_core::build_on_i(short int i, short int location_index){
 	else{
 		//unix
 		if (( socketfd[i] = socket(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK, 0)) == -1) {
-		//if (( socketfd[i] = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
 			return false;
 		}
 		if (setsockopt(socketfd[i], SOL_SOCKET, SO_REUSEADDR, &j, sizeof(j)) == -1) {
@@ -295,8 +320,20 @@ inline bool client_core::build_on_i(short int i, short int location_index){
 		strcpy(addr.sun_path, (*location)[location_index].c_str());
 		j = strlen(addr.sun_path) + sizeof(addr.sun_family);
 		if (connect(socketfd[i], (struct sockaddr *)&addr, j) == -1) {
-			close_runner(i);
-			return false;
+			if(errno!=EINPROGRESS){
+				close_runner(i);
+				return false;
+			}
+			else{
+				if(getsockopt(socketfd[i], SOL_SOCKET, SO_ERROR, &result, &result_len) < 0){
+					close_runner(i);
+					return false;
+				}
+				if(result!=0){
+					close_runner(i);
+					return false;
+				}
+			}
 		}
 	}
 	ev.data.fd = socketfd[i];
@@ -401,6 +438,11 @@ char client_core::fire(short int &location_index,std::string &msg){
 		return hast_client::EXIST;
 	}
 	a = write(runner_index,location_index,msg);
+	/*
+	std::cout << "FIRE: " << runner_index << std::endl;
+	std::cout << "FIRE fd: " << socketfd[runner_index] << std::endl;
+	std::cout << "FIRE msg: " << msg << std::endl;
+	*/
 	if(a!=hast_client::SUCCESS){
 		return a;
 	}
@@ -514,21 +556,6 @@ char client_core::uncheck(short int &location_index){
 	return fire(location_index,tmp_msg);
 }
 
-inline short int client_core::up(short int runner_index){
-	if(runner_index==0){
-		return 0;
-	}
-	int a;
-	a = socketfd[runner_index];
-	socketfd[runner_index] = socketfd[runner_index-1];
-	socketfd[runner_index-1] = a;
-	a = location_list[runner_index];
-	location_list[runner_index] = location_list[runner_index-1];
-	location_list[runner_index-1] = a;
-	--runner_index;
-	return runner_index;
-}
-
 void client_core::set_wait_maximum(short int wait){
 	wait_maximum = wait*1000;
 }
@@ -548,6 +575,7 @@ std::vector<std::string> client_core::get_error_flag(){
 			"Invalid message format",
 			"thread joinable is false (client_thread)",
 			"epoll events is not 1",
-			"SSL_read fail"};
+			"SSL_read fail",
+			"Error Reply"};
 	return list;
 }

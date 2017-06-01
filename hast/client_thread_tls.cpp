@@ -116,8 +116,8 @@ inline short int client_thread_tls::build_runner(short int location_index){
 			}
 			else if(err==0){
 				//std::cout << "SSL_connect fail 0" << std::endl;
-				close_runner(runner_index);
 				ssl_mx.unlock();
+				close_runner(runner_index);
 				return -1;
 			}
 			else{
@@ -128,8 +128,8 @@ inline short int client_thread_tls::build_runner(short int location_index){
 				}
 				else{
 					//std::cout << "SSL_connect fail err" << std::endl;
-					close_runner(runner_index);
 					ssl_mx.unlock();
+					close_runner(runner_index);
 					return -1;
 				}
 			}
@@ -140,50 +140,92 @@ inline short int client_thread_tls::build_runner(short int location_index){
 }
 
 inline void client_thread_tls::close_runner(short int runner_index){
+	ssl_mx.lock();
 	if(ssl[runner_index]!=nullptr){
-		ssl_mx.lock();
 		SSL_free(ssl[runner_index]);
 		ssl[runner_index] = nullptr;
-		ssl_mx.unlock();
 	}
+	ssl_mx.unlock();
 	client_core::close_runner(runner_index);
 }
 
-char client_thread_tls::write(short int &runner_index, short int location_index, std::string &msg){
+inline char client_thread_tls::write(short int &runner_index, short int location_index, std::string &msg){
 	if(TLS[location_index]==false){
 		return client_core::write(runner_index,location_index,msg);
 	}
 	else{
-		ssl_mx.lock();
-		if( SSL_write(ssl[runner_index], msg.c_str(), msg.length()) <= 0){
-			close_runner(runner_index);
-			runner_index = get_runner(location_index);
-			if(runner_index==-1){
-				runner_index = build_runner(location_index);
+		int len {msg.length()},flag;
+		const char* cmsg {msg.c_str()};
+		bool retry {false};
+		for(;;){
+			ssl_mx.lock();
+			flag = SSL_write(ssl[runner_index], cmsg, len);
+			ssl_mx.unlock();
+			if(flag>0){
+				if(flag==len){
+					return hast_client::SUCCESS;
+				}
+				else{
+					msg = msg.substr(flag);
+					cmsg = msg.c_str();
+					len = msg.length();
+				}
 			}
-			if(runner_index==-1){
-				msg = error_msg(hast_client::EXIST,location_index,msg);
-				error_fire(msg);
-				msg.clear();
-				ssl_mx.unlock();
-				return hast_client::EXIST;
-			}
-			if( SSL_write(ssl[runner_index], msg.c_str(), msg.length()) < 0){
+			else if(flag==0){
+				if(retry==true){
+					close_runner(runner_index);
+					runner_index = -1;
+					msg = error_msg(hast_client::SEND,location_index,msg);
+					error_fire(msg);
+					msg.clear();
+					return hast_client::SEND;
+				}
+				retry = true;
 				close_runner(runner_index);
-				runner_index = -1;
-				msg = error_msg(hast_client::SEND,location_index,msg);
-				error_fire(msg);
-				msg.clear();
-				ssl_mx.unlock();
-				return hast_client::SEND;
+				runner_index = get_runner(location_index);
+				if(runner_index==-1){
+					runner_index = build_runner(location_index);
+				}
+				if(runner_index==-1){
+					msg = error_msg(hast_client::EXIST,location_index,msg);
+					error_fire(msg);
+					msg.clear();
+					return hast_client::EXIST;
+				}
+			}
+			else{
+				flag = SSL_get_error(ssl[runner_index],flag);
+				if(flag==SSL_ERROR_WANT_READ || flag==SSL_ERROR_WANT_WRITE){
+					continue;
+				}
+				else{
+					if(retry==true){
+						close_runner(runner_index);
+						runner_index = -1;
+						msg = error_msg(hast_client::SEND,location_index,msg);
+						error_fire(msg);
+						msg.clear();
+						return hast_client::SEND;
+					}
+					retry = true;
+					close_runner(runner_index);
+					runner_index = get_runner(location_index);
+					if(runner_index==-1){
+						runner_index = build_runner(location_index);
+					}
+					if(runner_index==-1){
+						msg = error_msg(hast_client::EXIST,location_index,msg);
+						error_fire(msg);
+						msg.clear();
+						return hast_client::EXIST;
+					}
+				}
 			}
 		}
-		ssl_mx.unlock();
-		return hast_client::SUCCESS;
 	}
 }
 
-char client_thread_tls::read(short int runner_index, std::string &reply_str){
+inline char client_thread_tls::read(short int runner_index, std::string &reply_str){
 	if(TLS[location_list[runner_index]]==false){
 		return client_core::read(runner_index,reply_str);
 	}
@@ -198,8 +240,16 @@ char client_thread_tls::read(short int runner_index, std::string &reply_str){
 				reply_str.append(reply,len);
 			}
 			else if(len==-1){
-				ssl_mx.unlock();
-				return hast_client::SUCCESS;
+				len = SSL_get_error(ssl[runner_index],len);
+				if(len==SSL_ERROR_WANT_READ || len==SSL_ERROR_WANT_WRITE){
+					ssl_mx.unlock();
+					return hast_client::SUCCESS;
+				}
+				else{
+					ssl_mx.unlock();
+					reply_str.clear();
+					return hast_client::SSL_r;
+				}
 			}
 			else if(len==0){
 				reply_str.clear();

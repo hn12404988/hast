@@ -122,6 +122,11 @@ char client_thread::fire_thread(short int &location_index, std::string &msg, std
 		return hast_client::EXIST;
 	}
 	a = write(runner_index,location_index,msg);
+	/*
+	std::cout << "FIRE_thread: " << runner_index << std::endl;
+	std::cout << "FIRE thread fd: " << socketfd[runner_index] << std::endl;
+	std::cout << "FIRE thread msg: " << msg << std::endl;
+	*/
 	if(a!=hast_client::SUCCESS){
 		return a;
 	}
@@ -133,12 +138,14 @@ char client_thread::fire_thread(short int &location_index, std::string &msg, std
 			msg.clear();
 			return hast_client::JOIN;
 		}
+		//std::cout << "new thread: " << runner_index << std::endl;
 		waiting[runner_index] = true;
 		store_reply[runner_index] = reply;
 		on_air = true;
 		thread = new std::thread([&]{this->recv_epoll_thread();});
 	}
 	else{
+		//std::cout << "old thread: " << runner_index << std::endl;
 		waiting[runner_index] = true;
 		store_reply[runner_index] = reply;
 		mx.unlock();
@@ -157,22 +164,15 @@ char client_thread::fireNforget(short int &location_index,std::string &msg){
 inline short int client_thread::get_runner(short int location_index){
 	short int i;
 	i = amount-1;
-	if(on_air==true){
-		for(;i>=0;--i){
-			if(location_list[i]==location_index && waiting[i]==false){
-				break;
-			}
+	mx.lock();
+	for(;i>=0;--i){
+		if(location_list[i]==location_index && waiting[i]==false){
+			break;
 		}
-		return i;
 	}
-	else{
-		for(;i>=0;--i){
-			if(location_list[i]==location_index){
-				break;
-			}
-		}
-		return i;
-	}
+	mx.unlock();
+	//std::cout << "GET: " << i << std::endl;
+	return i;
 }
 
 void client_thread::recv_epoll_thread(){
@@ -198,6 +198,7 @@ void client_thread::recv_epoll_thread(){
 		}
 		mx.unlock();
 		l = epoll_wait(epollfd, events, MAX_EVENTS, wait_maximum);
+		//std::cout << "thread epoll: " << l << std::endl;
 		if(l==0){
 			if(init==false){
 				for(m=0;m<amount;++m){
@@ -237,6 +238,9 @@ void client_thread::recv_epoll_thread(){
 					if(waiting[m]==false){
 						continue;
 					}
+					//std::cout << "m wait: " << m << std::endl;
+					//std::cout << "m wait fd: " << socketfd[m] << std::endl;
+					//std::cout << "m wait data: " << events[l].data.fd << std::endl;
 					if(events[l].data.fd==socketfd[m]){
 						if(events[l].events!=1){
 							if(store_reply[m]!=nullptr){
@@ -255,13 +259,17 @@ void client_thread::recv_epoll_thread(){
 							break;
 						}
 						a = read(m,tmp_str);
+						//std::cout << "read a reply: " << tmp_str << std::endl;
 						break;
 					}
 				}
 				if(m==amount){
+					//std::cout << "m amount" << std::endl;
 					continue;
 				}
 				if(a!=hast_client::SUCCESS){
+					//std::cout << "read a FAIL" << std::endl;
+					echo_flag(a);
 					if(store_reply[m]!=nullptr){
 						tmp_str = error_msg(a,location_list[m],*store_reply[m]);
 						store_reply[m]->clear();
@@ -273,6 +281,7 @@ void client_thread::recv_epoll_thread(){
 					error_fire(tmp_str);
 				}
 				else{
+					//std::cout << "read a: SUCCESS" << std::endl;
 					if(tmp_str==""){
 						if(store_reply[m]!=nullptr){
 							tmp_str = error_msg(hast_client::REPLY,location_list[m],*store_reply[m]);
@@ -302,10 +311,10 @@ void client_thread::recv_epoll_thread(){
 						}
 					}
 				}
+				//std::cout << "ALL SUCCESS: " << m << std::endl;
 				waiting[m] = false;
 				wait_history[m] = false;
 				store_reply[m] = nullptr;
-				continue;
 			}
 		}
 		else{

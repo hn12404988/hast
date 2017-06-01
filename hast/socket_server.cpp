@@ -17,6 +17,90 @@ namespace hast{
 	void socket_server::set_shutdown_code(std::string code){
 		shutdown_code = code;
 	}
+
+	inline bool socket_server::read(short int thread_index){
+		int len;
+		char new_char[transport_size];
+		for(;;){
+			len = recv(socketfd[thread_index], new_char, transport_size, 0);
+			if(len>0){
+				raw_msg[thread_index].append(new_char,len);
+			}
+			else if(len==0){
+				close_socket(socketfd[thread_index],__LINE__);
+				return false;
+			}
+			else{
+				if(errno==EAGAIN || errno==EWOULDBLOCK){
+					return true;
+				}
+				else{
+					close_socket(socketfd[thread_index],__LINE__);
+					return false;
+				}
+			}
+		}
+	}
+	
+	inline bool socket_server::write(short int thread_index, const char* msg){
+		std::string tmp_msg(msg);
+		return write(thread_index,tmp_msg);
+	}
+
+	inline bool socket_server::write(int socket_index, const char* cmsg){
+		std::string msg(cmsg);
+		int flag,len {msg.length()};
+		const char* i {msg.c_str()};
+		for(;;){
+			flag = send(socket_index , i , len , 0);
+			if(flag==-1){
+				if(errno==EAGAIN || errno==EWOULDBLOCK){
+					continue;
+				}
+				else{
+					close_socket(socket_index,__LINE__);
+					return false;
+				}
+			}
+			else{
+				if(flag==len){
+					return true;
+				}
+				else{
+					msg = msg.substr(flag);
+					i = msg.c_str();
+					len = msg.length();
+				}
+			}
+		}
+	}
+	
+	inline bool socket_server::write(short int thread_index, std::string &msg){
+		int flag,len {msg.length()};
+		const char* i {msg.c_str()};
+		for(;;){
+			flag = send(socketfd[thread_index] , i , len , 0);
+			if(flag==-1){
+				if(errno==EAGAIN || errno==EWOULDBLOCK){
+					continue;
+				}
+				else{
+					close_socket(socketfd[thread_index],__LINE__);
+					return false;
+				}
+			}
+			else{
+				if(flag==len){
+					return true;
+				}
+				else{
+					msg = msg.substr(flag);
+					i = msg.c_str();
+					len = msg.length();
+				}
+			}
+		}
+	}
 	
 	void socket_server::done(const short int thread_index){
 		/**
@@ -209,38 +293,20 @@ namespace hast{
 				continue;
 			}
 			got_it = true;
-			int l;
 			if(status[thread_index]==hast::READ){
-				char new_char[transport_size];
-				for(;;){
-					l = recv(socketfd[thread_index], new_char, transport_size, 0);
-					if(l>0){
-						raw_msg[thread_index].append(new_char,l);
-					}
-					else if(l==0){
-						break;
-					}
-					else{
-						l = 1;
-						break;
-					}
-				}
-				if(l==0){
-					//client close connection.
-					close_socket(socketfd[thread_index],__LINE__);
+				if(read(thread_index)==false){
 					continue;
 				}
-				if(call_shutdown==true){
-					if(raw_msg[thread_index]==shutdown_code){
-						byebye = true;
-						send(socketfd[thread_index], "1", 1,0);
-						continue;
-					}
+			}
+			if(call_shutdown==true){
+				if(raw_msg[thread_index]==shutdown_code){
+					byebye = true;
+					write(thread_index,"1");
+					continue;
 				}
 			}
-			else{
-			}
 			if(section_check==true){
+				int l;
 				if(raw_msg[thread_index][0]=='<' && raw_msg[thread_index].back()=='>'){
 					/**
 					 * signal
@@ -253,11 +319,11 @@ namespace hast{
 						if(section_check_fd>=0){
 							section_check_fd = -1;
 							check_str = "<>";
-							send(socketfd[thread_index], "1", 1,0);
+							write(thread_index,"1");
 						}
 						else{
 							//Something wrong, mainly because the time of check period exceed `topology_wait`.
-							send(socketfd[thread_index], "0{\"Error\":\"uncheck fail\"}", 25,0);
+							write(thread_index,"0{\"Error\":\"uncheck fail\"}");
 						}
 						if(section_check_id==thread_index){
 							check_mx.unlock();
@@ -311,12 +377,16 @@ namespace hast{
 						}
 						check_str = raw_msg[thread_index];
 						//check_mx.unlock();
-						send(socketfd[thread_index], "1", 1,0);
+						if(write(thread_index,"1")==false){
+							check_mx.unlock();
+							section_check_id = -1;
+						}
 					}
 					continue;
 				}
 			}
 			if(msg_freeze==true){
+				int l;
 				if(raw_msg[thread_index].back()=='!'){
 					/**
 					 * This msg is just a signal.
@@ -329,11 +399,11 @@ namespace hast{
 						if(msg_freeze_fd>=0){
 							msg_freeze_fd = -1;
 							freeze_str = "!";
-							send(socketfd[thread_index], "1", 1,0);
+							write(thread_index,"1");
 						}
 						else{
 							//Something wrong, mainly because the time of check period exceed `topology_wait`.
-							send(socketfd[thread_index], "0{\"Error\":\"unfreeze fail\"}", 26,0);
+							write(thread_index,"0{\"Error\":\"unfreeze fail\"}");
 						}
 						if(msg_freeze_id==thread_index){
 							freeze_mx.unlock();
@@ -391,10 +461,12 @@ namespace hast{
 							}
 						}
 						if(msg_freeze_fd==socketfd[thread_index]){
-							send(socketfd[thread_index], "1", 1,0);
+							if(write(thread_index,"1")==false){
+								msg_freeze_id = -1;
+							}
 						}
 						else{
-							send(socketfd[thread_index], "0{\"Error\":\"init too long\"}", 26,0);
+							write(thread_index,"0{\"Error\":\"init too long\"}");
 							msg_freeze_fd = -1;
 							freeze_str = "!";
 							msg_freeze_id = -1;
@@ -464,7 +536,7 @@ namespace hast{
 		if(socket_index<0){
 			return;
 		}
-		std::cout << "close fd: " << socket_index << " by line: " << line << std::endl;
+		//std::cout << "close fd: " << socket_index << " by line: " << line << std::endl;
 		short int a;
 		shutdown(socket_index,SHUT_RDWR);
 		close(socket_index);
@@ -521,7 +593,7 @@ namespace hast{
 			new_socket = accept4(host_socket, (struct sockaddr *)&client_addr, &client_addr_size,SOCK_NONBLOCK);
 			if(new_socket>0){
 				if(byebye==true){
-					send(new_socket,"1",1,0);
+					write(new_socket,"1");
 					break;
 				}
 				ev.data.fd = new_socket;
@@ -536,11 +608,11 @@ namespace hast{
 	}
 
 	inline void socket_server::echo_back_msg(const short int thread_index, const char* msg){
-		send(socketfd[thread_index], msg, strlen(msg),0);
+		write(thread_index,msg);
 	}
 
 	inline void socket_server::echo_back_msg(const short int thread_index, std::string &msg){
-		send(socketfd[thread_index], msg.c_str(), msg.length(),0);
+		write(thread_index,msg);
 	}
 
 	inline void socket_server::echo_back_error(const short int thread_index, std::string msg){
@@ -550,19 +622,19 @@ namespace hast{
 		else{
 			msg = "0{\"Error\":\""+msg+"\"}";
 		}
-		send(socketfd[thread_index], msg.c_str(), msg.length(),0);
+		write(thread_index,msg);
 	}
 	
 	inline void socket_server::echo_back_sql_error(const short int thread_index){
-		send(socketfd[thread_index], "0{\"Error\":\"SQL\"}", 16,0);
+		write(thread_index,"0{\"Error\":\"SQL\"}");
 	}
 
 	inline void socket_server::echo_back_result(const short int thread_index, bool error){
 		if(error==true){
-			send(socketfd[thread_index], "0", 1,0);
+			write(thread_index,"0");
 		}
 		else{
-			send(socketfd[thread_index], "1", 1,0);
+			write(thread_index,"1");
 		}
 	}
 
