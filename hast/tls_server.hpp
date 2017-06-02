@@ -22,6 +22,7 @@ protected:
 public:
 	~tls_server();
 	void start_accept() override;
+	void close_socket(const short int thread_index) override;
 };
 
 #include <hast/tls_server.cpp>

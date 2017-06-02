@@ -35,6 +35,10 @@ void tls_server::reset_accept(int socket_index,SSL *ssl){
 	SSL_free(ssl);
 }
 
+void tls_server::close_socket(const short int thread_index){
+	close_socket(socketfd[thread_index],__LINE__);
+}
+
 void tls_server::close_socket(const int socket_index, int line){
 	socket_server::close_socket(socket_index,line);
 	ssl_mx.lock();
